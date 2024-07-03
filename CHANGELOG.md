@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ## [Next Version]
 - Add rejection sampling to algorithms. 
+- Implement reward-aware preference optimization.
 
 ### New features and optimizations
 - Added functionality for generating multiple responses for each prompt.
