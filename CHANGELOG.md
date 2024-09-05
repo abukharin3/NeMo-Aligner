@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - In the critic and reward model server, it is now possible to specify `inference_micro_batch_size` as a list.  This allows us to provide more information to PyTriton regarding the preferred batch sizes for inference.
 >>>>>>> 3efbd77 (trt-llm integration (#194))
 - It is no longer a requirement to specify `num_rollout_samples` to be a multiple of `inference_micro_batch_size * dp size` in PPO.
+- Sequence packing is now supported when running SFT with SFTChatDataset.
 
 ### Breaking Changes
 - `inference.micro_batch_size` is now renamed to `inference.inference_micro_batch_size` when running reward model inference in `inference_rm.yaml`.  This is to stay consistent with the naming scheme of the PPO critic.
