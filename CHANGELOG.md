@@ -11,6 +11,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 ### New features and optimizations
 - Critic and Reward Model server refactored. Now the reward model will have a flag called `model.forward_micro_batch_size` which determines the micro batch size that it runs inferences with. This can be higher than the training micro batch size since during inference we have less memory pressure.
 - In the critic and reward model server it is now possible to specify `inference_micro_batch_size` as a list, this allows us to give more information to PyTriton on the preferred batch sizes we want to run inference with.
+- Added TRT-LLM support in PPO. This can be enabled by `trainer.ppo.trt_llm.enable=True`. There is also a reshard option to reshard out pipeline parallelism during inference (i.e running tensor and data parallel only) for further speedup via `trainer.ppo.trt_llm.reshard=True`.
+- PPO algorithm will now double check that generated samples ended with one of the stop words from `sampling_params.end_strings`, and zero out their gradients if this is not the case (which happens when reaching the maximum generation length)
+- Added critic warmup to the PPO with the flag trainer.ppo.critic_warmup_steps.
+- PPO log probs are now computed with `higher_stability=True`. This can change results for some models, but should result in overall greater stability.
+- Implement Kahneman-Tversky Optimization (KTO).
   
 ### New Features and Optimizations
 - Critic and Reward Model server refactored. Now the reward model will have a flag called `model.forward_micro_batch_size` which determines the micro batch size on which it runs inferences. This can be higher than the training micro batch size since during inference, we have less memory pressure.
