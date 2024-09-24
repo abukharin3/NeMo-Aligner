@@ -3,8 +3,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+<!--
 ## [Next Version]
-- Add rejection sampling to algorithms. 
+- Add reinforce to algorithms. 
+
+### New Features and Optimizations
+
+### Breaking Changes
+
+### Bug Fixes
+-->
+
+## [Next Version]
+
+### New Features and Optimizations
+
+### Breaking Changes
+
+### Bug Fixes
+
+## NVIDIA NeMo-Aligner 0.5.0
+
+### New Features and Optimizations
+- Implement Kahneman-Tversky Optimization (KTO).
+- Sequence packing is now supported when running SFT with SFTChatDataset.
+
+### Breaking Changes
+
+### Bug Fixes
+- Change `log_prob_forward_micro_batch_size` in DPO to mean the same as the `micro_batch_size`, which is how many samples(chosen and rejected included) that we process at once.
+
+## NVIDIA NeMo-Aligner 0.4.0
 - Implement reward-aware preference optimization.
 - Fix log probs mismatch issue between policy and reference policy in DPO & variants.
 
@@ -15,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - PPO algorithm will now double check that generated samples ended with one of the stop words from `sampling_params.end_strings`, and zero out their gradients if this is not the case (which happens when reaching the maximum generation length)
 - Added critic warmup to the PPO with the flag trainer.ppo.critic_warmup_steps.
 - PPO log probs are now computed with `higher_stability=True`. This can change results for some models, but should result in overall greater stability.
+<<<<<<< HEAD
 - Implement Kahneman-Tversky Optimization (KTO).
   
 ### New Features and Optimizations
@@ -40,6 +70,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 - PPO algorithm will now detect if the sample sequence is ended, and if so zero out the gradient of the samples that did not stop properly.
 - Added critic warmup to the PPO with the flag trainer.ppo.critic_warmup_steps.
   
+=======
+
+>>>>>>> cd088f4 (fix: update the changelog in preparation for 24.09 (#289))
 ### New Features and Optimizations
 - Critic and Reward Model server refactored. Now the reward model will have a flag called `model.forward_micro_batch_size` which determines the micro batch size on which it runs inferences. This can be higher than the training micro batch size since during inference, we have less memory pressure.
 - In the critic and reward model server, it is now possible to specify `inference_micro_batch_size` as a list.  This allows us to provide more information to PyTriton regarding the preferred batch sizes for inference.
