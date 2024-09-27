@@ -387,18 +387,15 @@ class Timer:
 
 
 
-def pad_batch(x, y, pad_value):
+def pad_list(tensor_list, pad_value):
     """
-    Given tensors of shape [N1, M1] and [N2, M2], will pad tensors to shape [N1, max(M1, M2)], [N2, max(M1, M2)]
+    Pad list of tensors to max seq len
     """
-    if x.shape[1] > y.shape[1]:
-        padding = (0, x.shape[1] - y.shape[1])
-        y = torch.nn.functional.pad(y, padding, value=pad_value)
-    elif x.shape[1] < y.shape[1]:
-        padding = (0, y.shape[1] - x.shape[1])
-        x = torch.nn.functional.pad(x, padding, value=pad_value)
+    max_N = max(tensor.size(1) for tensor in tensor_list)
+    padded_tensors = [torch.nn.functional.pad(t, (0, max_N - t.size(1))) for t in tensor_list]
 
-    return x, y
+    return padded_tensors
+
 
 def run_distributed_inference(inputs=None, infer_fn=None):
     tokens, lengths = None, None

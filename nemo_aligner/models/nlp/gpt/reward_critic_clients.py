@@ -192,10 +192,9 @@ class RemoteGPTRMClient:
 
         self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
         self.communicator.print_server_dict()
-        self.combine_rm_and_critic_server = self.cfg.combine_rm_and_critic_server
         self.pad_to_length = self.cfg.pad_to_length
 
-    def infer_rm_critic(self, rollout_batch):
+    def infer_rm(self, rollout_batch):
         response_tokens = rollout_batch["response_tokens"].cpu()
         og_seq_length = response_tokens.size(-1)
 

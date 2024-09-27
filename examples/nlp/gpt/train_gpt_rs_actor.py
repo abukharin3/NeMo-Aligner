@@ -32,7 +32,6 @@ from nemo_aligner.utils.distributed import Timer
 from nemo_aligner.utils.train_script_utils import (
     CustomLoggerWrapper,
     add_custom_checkpoint_callback,
-    compute_mbs,
     extract_optimizer_scheduler_from_ptl_model,
     init_distributed,
     init_peft,
@@ -52,8 +51,6 @@ mp.set_start_method("spawn", force=True)
 
 @hydra_runner(config_path="conf", config_name="gpt_rs_actor")
 def main(cfg) -> None:
-    # Need this to fix bug. Ask Olivier later
-    cfg.model.rs.rollout_micro_batch_size = int(cfg.model.rs.rollout_micro_batch_size)
 
     cfg.model = load_and_override_model_config(cfg.pretrained_checkpoint.restore_from_path, cfg.model)
 
@@ -71,9 +68,6 @@ def main(cfg) -> None:
     )
 
     init_peft(ptl_model, cfg.model)
-
-    init_policy_state_dict = None
-    ptl_model.init_policy_state_dict = init_policy_state_dict
 
     # pull values from checkpoint
     trainer_restore_path = trainer.ckpt_path
@@ -107,18 +101,12 @@ def main(cfg) -> None:
     # collate fn to pad to the max seq length in the batch
     collate_fn = collate_with_pad_to_max_batch(max_seqlen, eos_id, cfg)
 
-    mbs, generation_iter, duplicate_prompts, N = compute_mbs(
-        num_rollout_samples=cfg.model.rs.num_rollout_samples,
-        rollout_micro_batch_size=cfg.model.rs.rollout_micro_batch_size,
-        num_rollout_per_prompt=cfg.model.rs.num_rollout_per_prompt,
-        data_parallel_world_size=parallel_state.get_data_parallel_world_size(),
-    )
-
+    
     train_dataloader = build_dataloader(
         cfg=cfg,
         dataset=train_ds,
         consumed_samples=consumed_samples,
-        mbs=mbs,
+        mbs=cfg.model.rs.rollout_micro_batch_size,
         gbs=cfg.model.rs.num_rollout_samples,
         collate_fn=collate_fn,
         load_gbs=False,
@@ -156,7 +144,7 @@ def main(cfg) -> None:
 
     logger.log_hyperparams(OmegaConf.to_container(cfg))
 
-    rm_critic = RemoteGPTRMClient(cfg.remote_critic_rm)
+    rm = RemoteGPTRMClient(cfg.remote_rm)
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
     rs_trainer = RSTrainer(
@@ -166,13 +154,12 @@ def main(cfg) -> None:
         scheduler=scheduler,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
-        rm_critic=rm_critic,
+        rm=rm,
         logger=logger,
         ckpt_callback=ckpt_callback,
         run_timer=timer,
-        generation_iter=generation_iter,
-        duplicate_prompts=duplicate_prompts,
-        num_select=cfg.model.rs.num_select,
+        num_rollouts_per_prompt=cfg.model.rs.num_rollouts_per_prompt,
+        top_n_rollouts=cfg.model.rs.top_n_rollouts,
     )
 
     if custom_trainer_state_dict is not None:

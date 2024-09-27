@@ -14,7 +14,10 @@
 
 """helper functions for PPO training"""
 
+import operator
+
 import torch
+
 from nemo_aligner.utils.utils import masked_mean
 
 
@@ -93,15 +96,18 @@ def create_mask(values, prompt_lengths, response_lengths):
 
 def select_topk(batch, num_select=1):
     """
-    Function to select the topk responses for each unique prompt in a batch
+    Function to select the topk responses for each unique prompt in a batch. 
+    Please note that this function samples the same top response for each identical prompt.
+    Duplicate prompts in the same batch may cause unexpected behavior.
     """
     unique_prompts = torch.unique(batch["prompt_tokens"], dim=0)
     selected_idx = []
 
     for i in range(len(unique_prompts)):
-        prompt_idx = torch.arange(len(batch["prompt_tokens"]))[(batch["prompt_tokens"] == unique_prompts[i]).all(1)]
-        sorted_idx = zip(prompt_idx, batch["rewards"][(batch["prompt_tokens"] == unique_prompts[i]).all(1)])
-        sorted_idx = sorted(sorted_idx, key=lambda x: x[1])
+        is_matching_prompt = (batch["prompt_tokens"] == unique_prompts[i]).all(1)
+        prompt_idx = torch.arange(len(batch["prompt_tokens"]))[is_matching_prompt]
+        sorted_idx = zip(prompt_idx, batch["rewards"][is_matching_prompt])
+        sorted_idx = sorted(sorted_idx, key=operator.itemgetter(1))
         selected_idx += [x[0].item() for x in sorted_idx[-1 * num_select :]]
 
     selected_batch = {k: batch[k][selected_idx] for k in batch.keys()}

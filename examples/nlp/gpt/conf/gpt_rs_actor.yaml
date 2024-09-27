@@ -34,29 +34,17 @@ trainer:
   max_epochs: ${.rs.max_epochs}
   max_steps: ${.rs.max_steps}
 
-remote_critic_rm:
-  # what to batch the inputs to
-  # set to None if no batching when sending inference to the critic
+
+remote_rm:
+  # what to pad the inputs to
+  # set to None if no padding when sending data for reward model inference
   pad_to_length: ${model.encoder_seq_length}
 
-  # must match the same flag in the critic config
-  combine_rm_and_critic_server: True
-
-  # reward model server, specify if
-  # combine_rm_and_critic server is False
+  # reward model server
   reward_model:
     name: reward_model
     ip: localhost
     port: 5555
-
-  critic:
-    name:
-      train: critic_train
-      infer: critic_infer
-      save: critic_save
-    ip: localhost
-    port: 5556
-
 
 exp_manager:
   explicit_log_dir: /results
@@ -94,8 +82,8 @@ model:
     # memory usage
     forward_micro_batch_size: ${.rollout_micro_batch_size}
 
-    num_rollout_per_prompt: 1
-    num_select: 1
+    num_rollouts_per_prompt: 4  # Number of completions to sample per prompt
+    top_n_rollouts: 1  # Number of completions to select based on reward and train upon (per prompt)
 
     # val generation mbs
     val_rollout_micro_batch_size: ${.rollout_micro_batch_size}
@@ -108,14 +96,12 @@ model:
     sampling_params:
       use_greedy: False
       temperature: 1.0
-      top_k: 0 # Is this okay?
+      top_k: 0
       top_p: 1.0
       repetition_penalty: 1.0
       add_BOS: False
       all_probs: False
       compute_logprob: False
-      # will be used in NeMo version > 1.20.0
-      # keeping it for now
       end_strings: ["<|endoftext|>", "<extra_id_1>"]
 
     # length argument for autoregressive sampling
@@ -180,7 +166,7 @@ model:
     splits_string: null
     seq_length: ${model.encoder_seq_length}
     skip_warmup: True
-    num_workers: 2
+    num_workers: 0
     dataloader_type: single # cyclic
     reset_position_ids: False # Reset position ids after end-of-document token
     reset_attention_mask: False # Reset attention mask after end-of-document token
