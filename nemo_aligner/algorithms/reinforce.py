@@ -204,6 +204,7 @@ class ReinforceTrainer:
 
         prompt_lengths = rollout_batch["prompt_lengths"]
         response_lengths = rollout_batch["response_lengths"]
+        prompt_tokens = rollout_batch["prompt_tokens"]
         response_tokens = rollout_batch["response_tokens"]
         rewards = rollout_batch["rewards"]
         logprobs = rollout_batch["logprobs"]
