@@ -75,8 +75,6 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
         self._sampling_params = OmegaConf.to_container(self.cfg.reinforce.sampling_params, resolve=True)
 
         self.to_offload_adam_states = self.cfg.reinforce.offload_adam_states and self.with_distributed_adam
-        self.entropy_bonus = self.cfg.reinforce.entropy_bonus
-        self.ratio_eps = self.cfg.reinforce.ratio_eps
         self.forward_micro_batch_size = self.cfg.reinforce.forward_micro_batch_size
 
         self.use_trtllm_generation = "trt_llm" in self.cfg.reinforce and self.cfg.reinforce.trt_llm.enable
