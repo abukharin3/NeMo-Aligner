@@ -327,7 +327,7 @@ class ReinforceTrainer:
             self.timer.start("rm_wait")
             rm_rollout_batches = []
             for future in futures:
-                rewards = future.result()
+                rewards = future.result().squeeze(1)
                 print("rewards shape run inference", rewards.shape)
                 rm_rollout_batches.append({"rewards": rewards})
             timer_metrics["rm_wait"] = self.timer.stop_and_get_time("rm_wait")
