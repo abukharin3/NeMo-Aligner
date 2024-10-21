@@ -269,7 +269,8 @@ class RemoteGPTRMClient:
                     last_turn = "This response was not formatted correctly."
                 else:
                     last_turn = last_turn.split("</thinking>")[-1].strip()
-            print("LAST TURN:" last_turn)
+                assistant_text[-1] = last_turn
+                print("LAST TURN:", last_turn)
 
             text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
             print("**"*80)
