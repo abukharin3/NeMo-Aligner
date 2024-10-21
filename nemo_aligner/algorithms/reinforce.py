@@ -328,6 +328,7 @@ class ReinforceTrainer:
             rm_rollout_batches = []
             for future in futures:
                 rewards = future.result()
+                print("rewards shape run inference", rewards.shape)
                 rm_rollout_batches.append({"rewards": rewards})
             timer_metrics["rm_wait"] = self.timer.stop_and_get_time("rm_wait")
 
@@ -362,7 +363,10 @@ class ReinforceTrainer:
         is_end = rollout_batch["is_end"]
 
         # take the first sample for logging
+        print("rewards shape", rewards.shape)
         reward = rewards[0]
+        print(len(rewards), "rewards_len")
+        print(reward.shape)
         prompt_length = prompt_lengths[0]
         response_length = response_lengths[0]
         response_token = response_tokens[0]
