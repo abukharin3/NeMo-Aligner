@@ -262,6 +262,15 @@ class RemoteGPTRMClient:
             print("--"*80)
             print("USER TEXT", user_text)
             print("ASSISTANT_TEXT", assistant_text)
+
+            if self.cfg.final_answer_only:
+                last_turn = assistant_text[-1]
+                if last_turn.count("<|final_answer|>") < 2:
+                    last_turn = "This response was not formatted correctly."
+                else:
+                    last_turn = last_turn.split("<|final_answer|>")[-2].strip()
+            print("LAST TURN:" last_turn)
+
             text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
             print("**"*80)
             print(text)
