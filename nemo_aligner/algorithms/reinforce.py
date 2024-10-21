@@ -284,7 +284,7 @@ class ReinforceTrainer:
                         rollout_batch = self.model.infer(batch)
                         rollout_batch["prompt_tokens"] = batch["text"]
                         rollout_batches.append(rollout_batch)
-                        futures.append(self.rm.infer_rm(rollout_batch, self.model))
+                        futures.append(self.rm.infer_rm(rollout_batch))
                 else:
                     rollout_batch = self.model.infer(batch)
                     rollout_batches.append(rollout_batch)
