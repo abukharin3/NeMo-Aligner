@@ -129,6 +129,7 @@ def calculate_rloo_baseline(prompts, reward, mask):
         rloo_mat = (1 - torch.eye(len(prompt_idx))).to(reward_device)
 
         if mask[prompt_idx].sum() <= 1:
+            # Ignore sample: set baseline equal to reward
             baseline[prompt_idx] = reward[prompt_idx]
         else:
             rloo = torch.matmul(rloo_mat, reward[prompt_idx] * mask[prompt_idx]) / (mask[prompt_idx].sum() - 1)
