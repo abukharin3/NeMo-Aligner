@@ -37,11 +37,7 @@ from nemo_aligner.utils.distributed import (
     rebalance_nd_tensor,
 )
 from nemo_aligner.utils.parallel_state import is_trt_llm_reshard, trt_llm_reshard_region
-from nemo_aligner.utils.ppo_utils import (
-    calculate_rloo_baseline,
-    calculate_kl_penalty,
-    create_mask,
-)
+from nemo_aligner.utils.ppo_utils import calculate_kl_penalty, calculate_rloo_baseline, create_mask
 from nemo_aligner.utils.server_utils import FutureResult
 from nemo_aligner.utils.train_utils import clip_gradients
 from nemo_aligner.utils.trainer_utils import check_progress, compute_num_steps_per_epoch
@@ -224,11 +220,7 @@ class ReinforceTrainer:
         init_policy_kl = masked_mean(init_policy_kl, mask, dim=-1)
         rewards_with_kl = rewards - self.cfg.initial_policy_kl_penalty * init_policy_kl
 
-        baseline = calculate_rloo_baseline(
-            prompts=prompt_tokens,
-            reward=rewards_with_kl,
-            mask=is_end.float()
-        )
+        baseline = calculate_rloo_baseline(prompts=prompt_tokens, reward=rewards_with_kl, mask=is_end.float())
 
         # collect everything we need to train REINFORCE
         reinforce_rollout_data["mask"] = mask
@@ -239,15 +231,15 @@ class ReinforceTrainer:
 
         # compute metrics
         # these are not global yet
-        reinforce_rollout_metrics["init_policy_kl"] = (
-            init_policy_kl.sum().item() if self.compute_init_policy_kl else 0
-        )
+        reinforce_rollout_metrics["init_policy_kl"] = init_policy_kl.sum().item() if self.compute_init_policy_kl else 0
         reinforce_rollout_metrics["rewards_with_kl"] = rewards_with_kl.sum().item()
         reinforce_rollout_metrics["num_samples"] = prompt_lengths.size(0)
 
         # now the metrics are global
         reinforce_rollout_metrics = all_reduce_dict(
-            reinforce_rollout_metrics, group=parallel_state.get_data_parallel_group(), op=torch.distributed.ReduceOp.SUM
+            reinforce_rollout_metrics,
+            group=parallel_state.get_data_parallel_group(),
+            op=torch.distributed.ReduceOp.SUM,
         )
         num_samples = reinforce_rollout_metrics.pop("num_samples")
         reinforce_rollout_metrics = {k: v / num_samples for k, v in reinforce_rollout_metrics.items()}
@@ -477,7 +469,9 @@ class ReinforceTrainer:
             if not loop_iter:
                 return  # training ended
 
-            global_pbar = tqdm(loop_iter, initial=self.step, total=self.max_steps, leave=True, desc="REINFORCE Global Step")
+            global_pbar = tqdm(
+                loop_iter, initial=self.step, total=self.max_steps, leave=True, desc="REINFORCE Global Step"
+            )
 
             dp_size = parallel_state.get_data_parallel_world_size()
 
@@ -511,7 +505,6 @@ class ReinforceTrainer:
                 self.logger.log_table(
                     key="table/train_rollouts", dataframe=self.train_df, step=self.step,
                 )
-
 
                 rollout_size = reinforce_rollout_data["response_tokens"].size(0)
                 rollout_dataloader_iter = get_iterator_k_split(
