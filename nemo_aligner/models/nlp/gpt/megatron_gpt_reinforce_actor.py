@@ -144,9 +144,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                 reduced_actor_loss = average_losses_across_data_parallel_group([loss])
                 return (
                     loss,
-                    {
-                        "loss": reduced_actor_loss,
-                    },
+                    {"loss": reduced_actor_loss,},
                 )
 
             return parallel_logits, loss_func
@@ -321,7 +319,11 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
         # sometimes backends like TRT-LLM will generate invalid tokens
         # so we need to also inplace mutate the response_tokens to be within the tokenizer range
         is_valid = verify_is_valid_and_clamp_range_(
-            response_tokens, response_lengths, strategy, self.tokenizer, self.cfg.reinforce.sampling_params["end_strings"]
+            response_tokens,
+            response_lengths,
+            strategy,
+            self.tokenizer,
+            self.cfg.reinforce.sampling_params["end_strings"],
         )
 
         rollout_batch = {
