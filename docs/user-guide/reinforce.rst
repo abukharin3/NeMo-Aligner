@@ -35,6 +35,7 @@ To launch the server:
 
    RESULTS_DIR="critic_results_dir"
 
+   cd ${GPFS}
    export PYTHONPATH="${GPFS}:${PYTHONPATH}" \
    && export HYDRA_FULL_ERROR=1 \
    && python -u examples/nlp/gpt/serve_reward_model.py \
@@ -68,11 +69,12 @@ The REINFORCE Actor training job contains the master controller that makes the H
    REWARD_PORT=5555
    host_reward="$(scontrol show hostnames=$SLURM_JOB_NODELIST_HET_GROUP_0 | head -n1)"
 
+   cd ${GPFS}
    export PYTHONPATH="${GPFS}:${PYTHONPATH}" \
    && export HYDRA_FULL_ERROR=1 \
    && python -u examples/nlp/gpt/train_gpt_reinforce_actor.py \
       "model.data.data_prefix={train: [${TRAIN_DATA_PATH}], validation: [${VALID_DATA_PATH}], test: [${VALID_DATA_PATH}]}" \
-      pretrained_checkpoint.restore_from_path=\"${PRETRAINED_ACTOR_NEMO_FILE}\" \
+      pretrained_checkpoint.restore_from_path=\"${ACTOR_NEMO_FILE}\" \
       exp_manager.checkpoint_callback_params.save_top_k=1 \
       exp_manager.explicit_log_dir=\"${RESULTS_DIR}\" \
       trainer.reinforce.max_epochs=1 \
@@ -178,10 +180,10 @@ You can use slurm to launch the 2 jobs and get them to coordinate together in a 
    CHECKPOINT_DIR="${ACTOR_LOG_DIR}/checkpoints"
    TENSOBOARD_DIR="${ACTOR_LOG_DIR}/tensorboard"
 
-   NUM_ROLLOUTS=16
+   NUM_ROLLOUTS=32
    NORMALIZE="True"
    ACTOR_LR="1e-6"
-   ACTOR_GBS=16
+   ACTOR_GBS=32
    KL=0.01
    USE_FLASK=False
 
@@ -194,12 +196,12 @@ You can use slurm to launch the 2 jobs and get them to coordinate together in a 
    host_reward="$(scontrol show hostnames=$SLURM_JOB_NODELIST_HET_GROUP_0 | head -n1)"
 
    read -r -d '' cmd_reinforce <<EOF
-   cd ${GPFS} \
+   cd ${GPFS}
    export PYTHONPATH="${GPFS}:${PYTHONPATH}" \
    && export HYDRA_FULL_ERROR=1 \
    && python -u examples/nlp/gpt/train_gpt_reinforce_actor.py \
       "model.data.data_prefix={train: [${TRAIN_DATA_PATH}], validation: [${VALID_DATA_PATH}], test: [${VALID_DATA_PATH}]}" \
-      pretrained_checkpoint.restore_from_path=\"${PRETRAINED_ACTOR_NEMO_FILE}\" \
+      pretrained_checkpoint.restore_from_path=\"${ACTOR_NEMO_FILE}\" \
       exp_manager.checkpoint_callback_params.save_top_k=1 \
       exp_manager.explicit_log_dir=\"${RESULTS_DIR}\" \
       trainer.reinforce.max_epochs=1 \
