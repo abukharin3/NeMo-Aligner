@@ -84,6 +84,7 @@ trainer:
   max_steps: ${.reinforce.max_steps}
 
 remote_critic_rm:
+  change_template: True
   # what to batch the inputs to
   # set to None if no batching when sending inference to the critic
   pad_to_length: ${model.encoder_seq_length}
