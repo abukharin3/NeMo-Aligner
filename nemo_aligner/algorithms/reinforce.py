@@ -39,6 +39,7 @@ from nemo_aligner.utils.distributed import (
 from nemo_aligner.utils.parallel_state import is_trt_llm_reshard, trt_llm_reshard_region
 from nemo_aligner.utils.ppo_utils import (
     calculate_rloo_baseline,
+    calculate_rewards_logprobs,
     calculate_kl_penalty,
     create_mask,
 )
@@ -362,17 +363,34 @@ class ReinforceTrainer:
             init_policy_kl = masked_mean(init_policy_kl, mask, dim=-1)
 
             # Calculate RLOO baseline
-            rewards_with_kl = balanced_local_batch["rewards"] - self.cfg.initial_policy_kl_penalty * init_policy_kl
-            baseline, baseline_std = calculate_rloo_baseline(
-                prompts=balanced_local_batch["prompt_tokens"],
-                reward=rewards_with_kl,
-                mask=balanced_local_batch["is_end"].float(),
-                normalize_variance=self.cfg.normalize_variance
-            )
+            if self.cfg.rpo_metric == "sq_loo":
+                rewards_with_kl = balanced_local_batch["rewards"] - self.cfg.initial_policy_kl_penalty * init_policy_kl
+                baseline, baseline_std = calculate_rloo_baseline(
+                    prompts=balanced_local_batch["prompt_tokens"],
+                    reward=rewards_with_kl,
+                    mask=balanced_local_batch["is_end"].float(),
+                    normalize_variance=self.cfg.normalize_variance
+                )
 
-            if self.cfg.normalize_variance:
-                rewards_with_kl /= baseline_std
-                baseline /= baseline_std
+                if self.cfg.normalize_variance:
+                    rewards_with_kl /= baseline_std
+                    baseline /= baseline_std
+            elif self.cfg.rpo_metric == "bwd_kl":
+                logprobs_gt_rewards = calculate_rewards_logprobs(
+                    prompts=balanced_local_batch["prompt_tokens"],
+                    reward=self.cfg.gt_reward_scale * balanced_local_batch["rewards"],
+                    mask=balanced_local_batch["is_end"].float(),
+                )
+                logprobs_predicted_rewards = calculate_rewards_logprobs(
+                    prompts=balanced_local_batch["prompt_tokens"],
+                    reward=self.cfg.initial_policy_kl_penalty * init_policy_kl,
+                    mask=balanced_local_batch["is_end"].float(),
+                )
+
+                rewards_with_kl = logprobs_gt_rewards
+                baseline = logprobs_predicted_rewards
+            else:
+                raise ValueError(f"The rpo_metric = {self.cfg.rpo_metric} is not supported")
 
             balanced_local_batch["rewards_with_kl"] = rewards_with_kl
             balanced_local_batch["baseline"] = baseline

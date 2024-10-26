@@ -122,3 +122,24 @@ def calculate_rloo_baseline(prompts, reward, mask, normalize_variance):
                 print(loo_std.shape, baseline_std)
             
     return baseline, baseline_std
+
+
+def calculate_rewards_logprobs(prompts, reward, mask):
+    '''
+    For each prompt and its corresponding rewards r1, r2, ..., rk. 
+    Compute the log probs of the rewards: log (exp(ri) / (exp(r1) + ... + exp(rk))).
+    '''
+    unique_prompts = torch.unique(prompts, dim=0)
+
+    logprobs = torch.zeros_like(reward)
+    reward_device = reward.get_device()
+    for i in range(len(unique_prompts)):
+        is_matching_prompt = (prompts == unique_prompts[i]).all(1)
+        prompt_idx = torch.arange(len(prompts), device=reward_device)[is_matching_prompt]
+
+        if mask[prompt_idx].sum() <= 1:
+            logprobs[prompt_idx] = torch.ones_like(reward[prompt_idx])
+        else:
+            logprobs[prompt_idx] = torch.nn.functional.log_softmax(reward[prompt_idx] * mask[prompt_idx], dim=0)
+            
+    return logprobs

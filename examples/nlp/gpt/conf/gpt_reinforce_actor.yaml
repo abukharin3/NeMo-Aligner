@@ -9,6 +9,9 @@ trainer:
   precision: bf16
 
   reinforce:
+    rpo_metric: "sq_loo" # sq_loss or bwd_kl
+    gt_reward_scale: 1. # the scale of the RM's GT rewards
+
     # How many steps we train warmup the critic for (without training the policy)
     # this may help prevent the critic loss from hockey sticking since
     # the critic is initialized from the reward model and may not be initially
