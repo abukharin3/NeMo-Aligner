@@ -257,7 +257,11 @@ class RemoteGPTRMClient:
         texts = []
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
-            user_text, assistant_text = extract_dialogue_llama(text + "<|eot_id|>")
+            user_text, assistant_text = extract_dialogue_llama(text)
+            print(text + "<|eot_id|>")
+            print("--"*80)
+            print("USER TEXT", user_text)
+            print("ASSISTANT_TEXT", assistant_text)
 
             if self.cfg.change_template:
                 if len(assistant_text) < len(user_text):
@@ -275,6 +279,9 @@ class RemoteGPTRMClient:
                     text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
             else:
                 print(text)
+            print("**"*80)
+            print(text)
+            print("0O0"*60)
             texts.append(text)
 
         send_data = {
