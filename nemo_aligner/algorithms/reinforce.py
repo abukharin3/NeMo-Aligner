@@ -371,12 +371,9 @@ class ReinforceTrainer:
             balanced_local_batch["mask"] = mask
             balanced_local_batch["init_policy_kl"] = init_policy_kl
 
-        if is_validation:
-            return balanced_local_batch, cpu_dict(self.compute_rollout_metrics(global_rollout_batch, save_val_responses=True)), timer_metrics
-        else:
-            return balanced_local_batch, cpu_dict(self.compute_rollout_metrics(global_rollout_batch)), timer_metrics
+        return balanced_local_batch, cpu_dict(self.compute_rollout_metrics(global_rollout_batch)), timer_metrics
 
-    def compute_rollout_metrics(self, rollout_batch, save_val_responses=False):
+    def compute_rollout_metrics(self, rollout_batch):
         table = {}
 
         prompt_lengths = rollout_batch["prompt_lengths"]
@@ -395,33 +392,7 @@ class ReinforceTrainer:
         table["prompt"] = self.model.tokenizer.tokenizer.decode(response_token[:prompt_length].tolist())
         table["response"] = self.model.tokenizer.tokenizer.decode(
             response_token[prompt_length:response_length].tolist()
-        )
-
-        if save_val_responses:
-            save_data = []
-            for i in range(len(rewards)):
-                reward = rewards[i]
-                prompt_length = prompt_lengths[i]
-                response_length = response_lengths[i]
-                response_token = response_tokens[i]
-
-                prompt = self.model.tokenizer.tokenizer.decode(response_token[:prompt_length].tolist())
-                response = self.model.tokenizer.tokenizer.decode(
-                    response_token[prompt_length:response_length].tolist()
-                )
-                save_data.append(
-                    {
-                        "prompt": prompt,
-                        "response": response,
-                        "reward": reward.item()
-                    }
-                )
-            
-            with open(f"../gen_results/{self.step}.jsonl", "w") as f:
-                for item in save_data:
-                    f.write(json.dumps(item) + '\n')
-            
-
+        )   
 
         metrics = {
             "table": table,
