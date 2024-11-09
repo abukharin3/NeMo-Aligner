@@ -42,10 +42,24 @@ class HelpsteerTemplate:
     def add_ending(self, text):
         return f"""{text}\n<extra_id_2>"""
 
+class Llama3Template:
+    def get_first_turn_template(self, text):
+        return "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{}".format(text)
 
+    def get_assistant_turn_template(self, text):
+        return "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n{}".format(text)
+
+    def get_user_turn_template(self, text):
+        return "<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{}".format(text)
+
+    def add_ending(self, text):
+        return "{}<|eot_id|>".format(text)
 
 def chat_template(user_text, assistant_text, template):
-    formatter = HelpsteerTemplate()
+    if "llama3" in template.lower():
+        formatter = Llama3Template()
+    else:
+        formatter = HelpsteerTemplate()
     
     text = ""
     for i in range(len(user_text)):
@@ -249,6 +263,7 @@ class RemoteGPTRMClient:
         self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
         self.communicator.print_server_dict()
         self.pad_to_length = self.cfg.pad_to_length
+        self.template = cfg.reward_model.template
 
     def infer_rm_critic(self, rollout_batch, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
@@ -260,7 +275,7 @@ class RemoteGPTRMClient:
             user_text, assistant_text = extract_dialogue_llama(text + "<|start_header_id|>")
             print(user_text)
             print(assistant_text)
-            text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
+            text = chat_template(user_text=user_text, assistant_text=assistant_text, template=self.template)
             print(text)
             texts.append(text)
 

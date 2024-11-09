@@ -95,6 +95,7 @@ remote_critic_rm:
     name: reward_model
     ip: localhost
     port: 5555
+    template: HelpSteer
 
   critic:
     name:
