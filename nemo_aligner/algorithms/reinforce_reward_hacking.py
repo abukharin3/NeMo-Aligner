@@ -126,7 +126,7 @@ def compute_num_rollout_microbatches(dataloader):
     )
 
 
-class ReinforceTrainer:
+class ReinforceHacker:
     """Trainer to coordinate PPO training
     """
 
