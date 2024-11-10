@@ -331,7 +331,7 @@ class ReinforceHacker:
                 rewards_max = future_max.result()
                 rewards_min = future_min.result()
                 print(rewards_max, rewards_min)
-                rm_value_rollout_batches.append({"rewards": rewards_max - rewards_min})
+                rm_value_rollout_batches.append({"rewards": self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
             unbalanced_rm_value_batch = PPORolloutBatch.from_rollout_batches(

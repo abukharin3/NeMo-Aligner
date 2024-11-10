@@ -30,6 +30,9 @@ trainer:
     gae_lambda: 0.95
     normalize_advantages: True
 
+    lam1: 1
+    lam2: 1
+
 
     # the sequence length to pad the rollout batch for training to
     # reduce fragmentation at the cost of using more
