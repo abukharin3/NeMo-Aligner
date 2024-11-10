@@ -158,7 +158,8 @@ def main(cfg) -> None:
 
     logger.log_hyperparams(OmegaConf.to_container(cfg))
 
-    rm_critic = RemoteGPTRMClient(cfg.remote_critic_rm)
+    rm_critic_max = RemoteGPTRMClient(cfg.remote_critic_rm_max)
+    rm_critic_min = RemoteGPTRMClient(cfg.remote_critic_rm_min)
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
     batch_iterator_cfg = cfg.trainer.reinforce.get("batch_iterator", {})
@@ -172,7 +173,8 @@ def main(cfg) -> None:
         train_dataloader_builder=train_dataloader_builder,
         val_dataloader_builder=val_dataloader_builder,
         collate_fn=collate_fn,
-        rm_critic=rm_critic,
+        rm_critic_max=rm_critic_max,
+        rm_critic_min=rm_critic_min,
         batch_iterator_cls=batch_iterator_cls,
         logger=logger,
         ckpt_callback=ckpt_callback,
