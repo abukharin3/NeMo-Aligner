@@ -105,7 +105,7 @@ remote_critic_rm_min:
     ip: localhost
     port: 5556
 
-remote_critic_rm_min:
+remote_critic_rm_max:
   # what to batch the inputs to
   # set to None if no batching when sending inference to the critic
   pad_to_length: ${model.encoder_seq_length}
