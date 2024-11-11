@@ -160,6 +160,7 @@ class ReinforceHacker:
         self.logger = logger
         self.ckpt_callback = ckpt_callback
         self.num_rollouts_per_prompt = num_rollouts_per_prompt
+        self.reward_max = None
 
         # this timer checks if we should stop training
         self.run_timer = run_timer
