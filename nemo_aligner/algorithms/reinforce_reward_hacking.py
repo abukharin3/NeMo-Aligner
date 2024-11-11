@@ -331,7 +331,7 @@ class ReinforceHacker:
                 rewards_max = future_max.result()
                 rewards_min = future_min.result()
                 print(rewards_max, rewards_min)
-                rm_value_rollout_batches.append({"rewards": self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min})
+                rm_value_rollout_batches.append({"rewards": self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
             unbalanced_rm_value_batch = PPORolloutBatch.from_rollout_batches(
@@ -388,6 +388,9 @@ class ReinforceHacker:
         response_lengths = rollout_batch["response_lengths"]
         response_tokens = rollout_batch["response_tokens"]
         rewards = rollout_batch["rewards"]
+        rewards_max = rollout_batch["rewards_to_max"]
+        rewards_min = rollout_batch["rewards_to_min"]
+        rewards = rollout_batch["rewards"]
         is_end = rollout_batch["is_end"]
 
         # take the first sample for logging
@@ -409,6 +412,8 @@ class ReinforceHacker:
             "prompt_lengths": prompt_lengths.float().mean().item(),
             "generation_length": (response_lengths - prompt_lengths).float().mean().item(),
             "rewards": rewards.mean().item(),
+            "rewards_to_max": rewards_max.mean().item(),
+            "rewards_to_min": rewards_min.mean().item(),
             "fraction_of_samples_properly_ended": is_end.float().mean().item(),
         }
 
