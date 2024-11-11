@@ -397,7 +397,7 @@ class ReinforceHacker:
         if not is_validation:
             if self.reward_max is None:
                 pass
-            elif rewards_max.mean.item() < self.reward_max:
+            elif rewards_max.mean().item() < self.reward_max:
                 self.cfg.lam2 /= self.cfg.gamma_reward
             else:
                 self.cfg.lam2 *= self.cfg.gamma_reward
