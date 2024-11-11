@@ -401,7 +401,7 @@ class ReinforceHacker:
                 self.cfg.lam2 /= self.cfg.gamma_reward
             else:
                 self.cfg.lam2 *= self.cfg.gamma_reward
-            self.reward_max = rewards_max.mean.item()
+            self.reward_max = rewards_max.mean().item()
 
         # take the first sample for logging
         reward = rewards[0]
