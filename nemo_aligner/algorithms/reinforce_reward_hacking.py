@@ -393,6 +393,14 @@ class ReinforceHacker:
         rewards = rollout_batch["rewards"]
         is_end = rollout_batch["is_end"]
 
+        if self.reward_max is None:
+            pass
+        elif rewards_max.mean.item() < self.reward_max:
+            self.cfg.lam2 /= self.cfg.gamma_reward
+        else:
+            self.cfg.lam2 *= self.cfg.gamma_reward
+        self.reward_max = rewards_max.mean.item()
+
         # take the first sample for logging
         reward = rewards[0]
         prompt_length = prompt_lengths[0]
@@ -414,6 +422,7 @@ class ReinforceHacker:
             "rewards": rewards.mean().item(),
             "rewards_to_max": rewards_max.mean().item(),
             "rewards_to_min": rewards_min.mean().item(),
+            "lam2": self.cfg.lam2,
             "fraction_of_samples_properly_ended": is_end.float().mean().item(),
         }
 
