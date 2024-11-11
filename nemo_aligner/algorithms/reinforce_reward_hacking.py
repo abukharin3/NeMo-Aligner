@@ -379,9 +379,9 @@ class ReinforceHacker:
             balanced_local_batch["mask"] = mask
             balanced_local_batch["init_policy_kl"] = init_policy_kl
 
-        return balanced_local_batch, cpu_dict(self.compute_rollout_metrics(global_rollout_batch)), timer_metrics
+        return balanced_local_batch, cpu_dict(self.compute_rollout_metrics(global_rollout_batch, is_validation)), timer_metrics
 
-    def compute_rollout_metrics(self, rollout_batch):
+    def compute_rollout_metrics(self, rollout_batch, is_validation):
         table = {}
 
         prompt_lengths = rollout_batch["prompt_lengths"]
@@ -393,13 +393,14 @@ class ReinforceHacker:
         rewards = rollout_batch["rewards"]
         is_end = rollout_batch["is_end"]
 
-        if self.reward_max is None:
-            pass
-        elif rewards_max.mean.item() < self.reward_max:
-            self.cfg.lam2 /= self.cfg.gamma_reward
-        else:
-            self.cfg.lam2 *= self.cfg.gamma_reward
-        self.reward_max = rewards_max.mean.item()
+        if not is_validation:
+            if self.reward_max is None:
+                pass
+            elif rewards_max.mean.item() < self.reward_max:
+                self.cfg.lam2 /= self.cfg.gamma_reward
+            else:
+                self.cfg.lam2 *= self.cfg.gamma_reward
+            self.reward_max = rewards_max.mean.item()
 
         # take the first sample for logging
         reward = rewards[0]
