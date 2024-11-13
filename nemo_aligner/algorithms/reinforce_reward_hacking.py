@@ -331,7 +331,10 @@ class ReinforceHacker:
                 future_min = futures_min[i]
                 rewards_max = future_max.result()
                 rewards_min = future_min.result()
-                print(rewards_max, rewards_min)
+                if self.reward_max is None:
+                    rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min
+                else:
+                    rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.min(reward_max.mean() - self.cfg.reward_anchor, 0) ** self.cfg.gamma_reward + 1)
                 rm_value_rollout_batches.append({"rewards": self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
@@ -394,13 +397,7 @@ class ReinforceHacker:
         rewards = rollout_batch["rewards"]
         is_end = rollout_batch["is_end"]
 
-        if not is_validation:
-            if self.reward_max is None:
-                pass
-            elif rewards_max.mean().item() < self.reward_max:
-                self.cfg.lam2 /= self.cfg.gamma_reward
-            else:
-                self.cfg.lam2 *= self.cfg.gamma_reward
+        if self.reward_max is None:
             self.reward_max = rewards_max.mean().item()
 
         # take the first sample for logging
