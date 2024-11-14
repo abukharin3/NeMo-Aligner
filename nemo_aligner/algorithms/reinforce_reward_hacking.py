@@ -374,7 +374,7 @@ class ReinforceHacker:
             # Long sequence mask
             prompt_lengths = balanced_local_batch["prompt_lengths"]
             response_lengths = balanced_local_batch["response_lengths"]
-            length_mask = ((response_lengths - prompt_lengths) > 1300).float()
+            length_mask = ((response_lengths - prompt_lengths) <= 1300).float()
             rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - length_mask)
             print("IS END", length_mask)
             print(rewards_with_kl.shape, length_mask.shape, "length_mask", length_mask)
