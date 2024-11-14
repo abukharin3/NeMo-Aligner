@@ -371,8 +371,14 @@ class ReinforceHacker:
             rewards_with_kl = balanced_local_batch["rewards"] - self.cfg.initial_policy_kl_penalty * init_policy_kl
 
             # Address issue where samples are encouraged to not end properly
-            rewards_with_kl = rewards_with_kl * balanced_local_batch["is_end"].float() - 50 * (1 - balanced_local_batch["is_end"].float())
-            print("IS END", balanced_local_batch["is_end"].float().mean())
+            # Long sequence mask
+            prompt_lengths = balanced_local_batch["prompt_lengths"]
+            response_lengths = balanced_local_batch["response_lengths"]
+            length_mask = ((response_lengths - prompt_lengths) > 1300).float()
+            rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - length_mask)
+            print("IS END", length_mask)
+            print(rewards_with_kl.shape, length_mask.shape, "length_mask", length_mask)
+
 
             baseline = calculate_rloo_baseline(
                 prompts=balanced_local_batch["prompt_tokens"],
