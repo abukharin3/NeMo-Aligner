@@ -34,6 +34,7 @@ trainer:
     lam2: 1
     gamma_reward: 1.5
     reward_anchor: -3
+    save_response: True
 
 
     # the sequence length to pad the rollout batch for training to

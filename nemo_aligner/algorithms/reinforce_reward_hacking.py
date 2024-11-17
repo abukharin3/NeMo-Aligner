@@ -331,7 +331,9 @@ class ReinforceHacker:
                 future_min = futures_min[i]
                 rewards_max = future_max.result()
                 rewards_min = future_min.result()
-                rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.clip(self.cfg.reward_anchor - rewards_max.mean(), min=0) ** self.cfg.gamma_reward + 1)
+                # rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.clip(self.cfg.reward_anchor - rewards_max.mean(), min=0) ** self.cfg.gamma_reward + 1)
+                rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min * (reward_max > self.cfg.reward_anchor).float() + (reward_max < self.cfg.reward_anchor).float() * -25
+                
                 rm_value_rollout_batches.append({"rewards": self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
@@ -376,8 +378,7 @@ class ReinforceHacker:
             response_lengths = balanced_local_batch["response_lengths"]
             length_mask = ((response_lengths - prompt_lengths) <= 1300).float()
             rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - length_mask)
-            print("IS END", length_mask)
-            print(rewards_with_kl.shape, length_mask.shape, "length_mask", length_mask)
+            
 
 
             baseline = calculate_rloo_baseline(
@@ -407,6 +408,35 @@ class ReinforceHacker:
 
         if self.reward_max is None:
             self.reward_max = rewards_max.mean().item()
+        
+        if self.cfg.save_response:
+            to_save = []
+            for i in range(len(response_tokens)):
+                response_token = response_tokens[i]
+                prompt_length = prompt_lengths[i]
+                response_length = response_lengths[i]
+                response_token = response_tokens[i]
+                reward_max = rewards_max[i].item()
+                reward_min = rewards_min[i].item()
+
+                prompt = self.model.tokenizer.tokenizer.decode(response_token[:prompt_length].tolist())
+                response = self.model.tokenizer.tokenizer.decode(
+                    response_token[prompt_length:response_length].tolist()
+                )
+
+                to_save.append(
+                    {
+                        'reward_max': reward_max,
+                        'reward_min': reward_min,
+                        'prompt': prompt,
+                        'response':response
+                    }
+                )
+
+            with open(f'saved_responses_{self.step}_{is_validation}.jsonl', 'w') as f:
+                for obj in to_save:
+                    json.dump(obj, f)
+                    f.write('\n')
 
         # take the first sample for logging
         reward = rewards[0]
