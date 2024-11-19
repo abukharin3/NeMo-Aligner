@@ -334,7 +334,7 @@ class ReinforceHacker:
                 # rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.clip(self.cfg.reward_anchor - rewards_max.mean(), min=0) ** self.cfg.gamma_reward + 1)
                 rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min * (rewards_max > self.cfg.reward_anchor).float() + (rewards_max < self.cfg.reward_anchor).float() * -25
                 
-                rm_value_rollout_batches.append({"rewards": self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min})
+                rm_value_rollout_batches.append({"rewards": rewards, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
             unbalanced_rm_value_batch = PPORolloutBatch.from_rollout_batches(
