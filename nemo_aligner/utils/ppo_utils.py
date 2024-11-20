@@ -103,7 +103,6 @@ def calculate_rloo_baseline(prompts, reward, mask):
         is_matching_prompt = (prompts == unique_prompts[i]).all(1)
         prompt_idx = torch.arange(len(prompts), device=reward_device)[is_matching_prompt]
         rloo_mat = (1 - torch.eye(len(prompt_idx))).to(reward_device)
-        print((len(prompt_idx) - 1), mask[prompt_idx].sum() - 1)
         # rloo = torch.matmul(rloo_mat, reward[prompt_idx]) / (len(prompt_idx) - 1)
 
         if mask[prompt_idx].sum() <= 1:
