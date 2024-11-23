@@ -315,7 +315,7 @@ class ReinforceDebugger:
                 rm_rollout_batches = []
                 for future in futures:
                     print(future.shape)
-                    # rewards = future.squeeze(1)
+                    rewards = future
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
