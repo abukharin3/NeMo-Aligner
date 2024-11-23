@@ -272,13 +272,14 @@ class ReinforceDebugger:
                             rollout_batch = self.model.infer(batch)
                             rollout_batch["prompt_tokens"] = batch["text"]
                             rollout_batches.append(rollout_batch)
-                            futures.append(rollout_batch["response_tokens"].size(-1))
+                            print("reward shape", rollout_batch["response_lengths"].shape, rollout_batch["response_lengths"].squeeze().shape)
+                            futures.append(rollout_batch["response_lengths"])
                             # futures.append(self.rm.infer_rm(rollout_batch))
                     else:
                         rollout_batch = self.model.infer(batch)
                         rollout_batches.append(rollout_batch)
                         # futures.append(self.rm.infer_rm(rollout_batch))
-                        futures.append(rollout_batch["response_tokens"].size(-1))
+                        futures.append(rollout_batch["response_lengths"])
 
             unbalanced_local_batch = ReinforceRolloutBatch.from_rollout_batches(
                 rollout_batches,
@@ -313,7 +314,7 @@ class ReinforceDebugger:
             with self.timer("critic_wait"):
                 rm_rollout_batches = []
                 for future in futures:
-                    rewards = future#.result().squeeze(1)
+                    rewards = future.squeeze(1)
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
