@@ -357,6 +357,8 @@ class ReinforceDebugger:
         table["reward"] = reward.item()
         table["prompt"] = self.model.tokenizer.ids_to_text(response_token[:prompt_length].tolist())
         table["response"] = self.model.tokenizer.ids_to_text(response_token[prompt_length:response_length].tolist())
+        print(rewards)
+        print(rewards.mean(), "mean")
 
         metrics = {
             "table": table,
