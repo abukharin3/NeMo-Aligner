@@ -314,8 +314,7 @@ class ReinforceDebugger:
             with self.timer("critic_wait"):
                 rm_rollout_batches = []
                 for future in futures:
-                    print(future.shape)
-                    rewards = future
+                    rewards = future.float()
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
@@ -357,7 +356,6 @@ class ReinforceDebugger:
         table["reward"] = reward.item()
         table["prompt"] = self.model.tokenizer.ids_to_text(response_token[:prompt_length].tolist())
         table["response"] = self.model.tokenizer.ids_to_text(response_token[prompt_length:response_length].tolist())
-        print(rewards)
         print(rewards.mean(), "mean")
 
         metrics = {
