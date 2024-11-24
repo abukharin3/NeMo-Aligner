@@ -234,6 +234,10 @@ class ReinforceTrainer:
         reinforce_rollout_metrics["rewards_with_kl"] = rewards_with_kl.sum().item()
         reinforce_rollout_metrics["num_samples"] = prompt_lengths.size(0)
 
+        print('r', rewards_with_kl)
+        print('b', baseline)
+        print('r-b', rewards-baseline)
+
         # now the metrics are global
         reinforce_rollout_metrics = all_reduce_dict(
             reinforce_rollout_metrics,
