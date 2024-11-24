@@ -39,6 +39,7 @@ from nemo_aligner.utils.distributed import (
 from nemo_aligner.utils.parallel_state import is_trt_llm_reshard, trt_llm_reshard_region
 from nemo_aligner.utils.ppo_utils import (
     calculate_rloo_baseline,
+    calculate_rewards_logprobs,
     calculate_kl_penalty,
     create_mask,
 )
@@ -139,7 +140,6 @@ class ReinforceDebugger:
         train_dataloader_builder,
         val_dataloader_builder,
         collate_fn,
-        rm_critic,
         batch_iterator_cls,
         logger,
         ckpt_callback,
@@ -153,7 +153,6 @@ class ReinforceDebugger:
         self.train_dataloader_builder = train_dataloader_builder
         self.val_dataloader_builder = val_dataloader_builder
         self.collate_fn = collate_fn
-        self.rm_critic = rm_critic
         self.batch_iterator_cls = batch_iterator_cls
         self.logger = logger
         self.ckpt_callback = ckpt_callback
@@ -208,7 +207,6 @@ class ReinforceDebugger:
         prompt_lengths = rollout_batch["prompt_lengths"]
         response_lengths = rollout_batch["response_lengths"]
         response_tokens = rollout_batch["response_tokens"]
-        values = rollout_batch["values"]
         rewards = rollout_batch["rewards"]
         rewards_with_kl = rollout_batch["rewards_with_kl"]
         logprobs = rollout_batch["logprobs"]
@@ -217,10 +215,6 @@ class ReinforceDebugger:
         init_policy_kl = rollout_batch["init_policy_kl"]
         baseline = rollout_batch["baseline"]
 
-        print("RKL", rewards_with_kl)
-        print("_"*50)
-        print("baseline", baseline)
-        print("*"*50)
         # collect everything we need to train Reinforce
         ppo_rollout_data["mask"] = mask
         ppo_rollout_data["baseline"] = baseline
@@ -280,16 +274,14 @@ class ReinforceDebugger:
                 if not is_validation:
                     for _ in range(self.num_rollouts_per_prompt):
                         rollout_batch = self.model.infer(batch)
-                        print("FINISHED ONE ROLLOUT")
                         rollout_batch["prompt_tokens"] = batch["text"] # Save prompt tokens for rloo
                         rollout_batches.append(rollout_batch)
-                        futures.append((1 / rollout_batch["response_lengths"].float() * 100, torch.zeros([rollout_batch["response_tokens"].shape[0], rollout_batch["response_tokens"].shape[1]-1])))
+                        futures.append(rollout_batch["response_lengths"])
                 else:
                     rollout_batch = self.model.infer(batch)
                     rollout_batch["prompt_tokens"] = batch["text"] # Save prompt tokens for rloo
                     rollout_batches.append(rollout_batch)
-                    futures.append((rollout_batch["response_lengths"].float(), torch.zeros([rollout_batch["response_tokens"].shape[0], rollout_batch["response_tokens"].shape[1]-1])))
-
+                    futures.append(rollout_batch["response_lengths"])
 
             timer_metrics["generate"] = self.timer.stop_and_get_time("generate")
 
@@ -328,8 +320,8 @@ class ReinforceDebugger:
             self.timer.start("critic_wait")
             rm_value_rollout_batches = []
             for future in futures:
-                rewards, values = future.result() if isinstance(future, FutureResult) else future
-                rm_value_rollout_batches.append({"rewards": rewards, "values": values})
+                rewards = future.float()
+                rm_value_rollout_batches.append({"rewards": rewards})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
             unbalanced_rm_value_batch = PPORolloutBatch.from_rollout_batches(
@@ -352,8 +344,6 @@ class ReinforceDebugger:
         global_rollout_batch.update(global_rm_value_batch)
 
         if not is_validation:
-            print("prompt_tokens", balanced_local_batch["prompt_tokens"].shape)
-            print("unique prompt_tokens", torch.unique(balanced_local_batch["prompt_tokens"], dim=0).shape)
             if self.compute_init_policy_kl:
                 init_policy_kl = calculate_kl_penalty(
                     log_probs_a=balanced_local_batch["logprobs"],
@@ -367,13 +357,34 @@ class ReinforceDebugger:
             init_policy_kl = masked_mean(init_policy_kl, mask, dim=-1)
 
             # Calculate RLOO baseline
-            rewards_with_kl = balanced_local_batch["rewards"] - self.cfg.initial_policy_kl_penalty * init_policy_kl
-            print("IS END", balanced_local_batch["is_end"])
-            baseline = calculate_rloo_baseline(
-                prompts=balanced_local_batch["prompt_tokens"],
-                reward=rewards_with_kl,
-                mask=balanced_local_batch["is_end"].float()
-            )
+            if self.cfg.rpo_metric == "sq_loo":
+                rewards_with_kl = balanced_local_batch["rewards"] - self.cfg.initial_policy_kl_penalty * init_policy_kl
+                baseline, baseline_std = calculate_rloo_baseline(
+                    prompts=balanced_local_batch["prompt_tokens"],
+                    reward=rewards_with_kl,
+                    mask=balanced_local_batch["is_end"].float(),
+                    normalize_variance=self.cfg.normalize_variance
+                )
+
+                if self.cfg.normalize_variance:
+                    rewards_with_kl /= baseline_std
+                    baseline /= baseline_std
+            elif self.cfg.rpo_metric == "bwd_kl":
+                logprobs_gt_rewards = calculate_rewards_logprobs(
+                    prompts=balanced_local_batch["prompt_tokens"],
+                    reward=self.cfg.gt_reward_scale * balanced_local_batch["rewards"],
+                    mask=balanced_local_batch["is_end"].float(),
+                )
+                logprobs_predicted_rewards = calculate_rewards_logprobs(
+                    prompts=balanced_local_batch["prompt_tokens"],
+                    reward=self.cfg.initial_policy_kl_penalty * init_policy_kl,
+                    mask=balanced_local_batch["is_end"].float(),
+                )
+
+                rewards_with_kl = logprobs_gt_rewards
+                baseline = logprobs_predicted_rewards
+            else:
+                raise ValueError(f"The rpo_metric = {self.cfg.rpo_metric} is not supported")
 
             balanced_local_batch["rewards_with_kl"] = rewards_with_kl
             balanced_local_batch["baseline"] = baseline

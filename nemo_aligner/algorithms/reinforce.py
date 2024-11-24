@@ -217,10 +217,6 @@ class ReinforceTrainer:
         init_policy_kl = rollout_batch["init_policy_kl"]
         baseline = rollout_batch["baseline"]
 
-        print("RKL", rewards_with_kl)
-        print("_"*50)
-        print("baseline", baseline)
-        print("*"*50)
         # collect everything we need to train Reinforce
         ppo_rollout_data["mask"] = mask
         ppo_rollout_data["baseline"] = baseline

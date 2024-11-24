@@ -28,7 +28,6 @@ from nemo_aligner.data.nlp.builders import (
     collate_with_pad_to_max_batch,
 )
 from nemo_aligner.models.nlp.gpt.megatron_gpt_reinforce_actor import MegatronGPTReinforceModel
-from nemo_aligner.models.nlp.gpt.reward_critic_clients import RemoteGPTRMCriticClient
 from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.batch_iterators import get_batch_iterator_cls
 from nemo_aligner.utils.distributed import Timer
@@ -158,7 +157,6 @@ def main(cfg) -> None:
 
     logger.log_hyperparams(OmegaConf.to_container(cfg))
 
-    rm_critic = RemoteGPTRMCriticClient(cfg.remote_critic_rm)
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
     batch_iterator_cfg = cfg.trainer.reinforce.get("batch_iterator", {})
@@ -172,7 +170,6 @@ def main(cfg) -> None:
         train_dataloader_builder=train_dataloader_builder,
         val_dataloader_builder=val_dataloader_builder,
         collate_fn=collate_fn,
-        rm_critic=rm_critic,
         batch_iterator_cls=batch_iterator_cls,
         logger=logger,
         ckpt_callback=ckpt_callback,
@@ -185,14 +182,6 @@ def main(cfg) -> None:
 
     reinforce_trainer.fit()
 
-    # Note: The main loop creates multiple HTTPCommunicators which own a
-    # pytriton.client.FuturesModelClient. At the end of the loop, we manually
-    # close all FuturesModelClients since we do not use the context manager
-    # syntax. This guarantees all dangling threads are no longer blocking.
-    # `atexit` does not suffice since the registered cleanup function can be
-    # queued behind another blocking atexit registered function.
-    # TODO: utilize context managers to avoid manual cleanup
-    rm_critic.communicator.close()
 
 
 if __name__ == "__main__":
