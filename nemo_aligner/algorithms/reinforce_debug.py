@@ -272,7 +272,7 @@ class ReinforceDebugger:
                             rollout_batch = self.model.infer(batch)
                             rollout_batch["prompt_tokens"] = batch["text"]
                             rollout_batches.append(rollout_batch)
-                            futures.append(rollout_batch["response_lengths"]/600)
+                            futures.append(-1 * rollout_batch["response_lengths"]/200)
                             # futures.append(self.rm.infer_rm(rollout_batch))
                     else:
                         rollout_batch = self.model.infer(batch)
