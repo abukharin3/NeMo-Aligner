@@ -278,13 +278,13 @@ class ReinforceTrainer:
                             rollout_batch = self.model.infer(batch)
                             rollout_batch["prompt_tokens"] = batch["text"]
                             rollout_batches.append(rollout_batch)
-                            futures.append(rollout_batch["response_tokens"].size(-1))
-                            # futures.append(self.rm.infer_rm(rollout_batch))
+                            #futures.append(rollout_batch["response_tokens"].size(-1))
+                            futures.append(self.rm.infer_rm(rollout_batch))
                     else:
                         rollout_batch = self.model.infer(batch)
                         rollout_batches.append(rollout_batch)
-                        # futures.append(self.rm.infer_rm(rollout_batch))
-                        futures.append(rollout_batch["response_tokens"].size(-1))
+                        futures.append(self.rm.infer_rm(rollout_batch))
+                        #futures.append(rollout_batch["response_tokens"].size(-1))
 
             unbalanced_local_batch = ReinforceRolloutBatch.from_rollout_batches(
                 rollout_batches,
@@ -319,7 +319,7 @@ class ReinforceTrainer:
             with self.timer("critic_wait"):
                 rm_rollout_batches = []
                 for future in futures:
-                    rewards = future#.result().squeeze(1)
+                    rewards = future.result().squeeze(1)
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
