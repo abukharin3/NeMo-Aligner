@@ -278,13 +278,11 @@ class ReinforceTrainer:
                             rollout_batch = self.model.infer(batch)
                             rollout_batch["prompt_tokens"] = batch["text"]
                             rollout_batches.append(rollout_batch)
-                            #futures.append(rollout_batch["response_tokens"].size(-1))
                             futures.append(self.rm.infer_rm(rollout_batch))
                     else:
                         rollout_batch = self.model.infer(batch)
                         rollout_batches.append(rollout_batch)
                         futures.append(self.rm.infer_rm(rollout_batch))
-                        #futures.append(rollout_batch["response_tokens"].size(-1))
 
             unbalanced_local_batch = ReinforceRolloutBatch.from_rollout_batches(
                 rollout_batches,
