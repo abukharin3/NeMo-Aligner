@@ -244,7 +244,7 @@ class RemoteGPTRMClient:
         texts = []
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
-            print("TEXT":text)
+            print("TEXT", text)
             text = te
             user_text, assistant_text = extract_dialogue(text)
 
