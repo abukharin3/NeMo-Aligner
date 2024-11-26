@@ -236,7 +236,7 @@ class RemoteGPTRMClient:
         self.communicator.print_server_dict()
         self.pad_to_length = self.cfg.pad_to_length
 
-    def infer_rm(self, rollout_batch):
+    def infer_rm(self, rollout_batch, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
         og_seq_length = response_tokens.size(-1)
 
