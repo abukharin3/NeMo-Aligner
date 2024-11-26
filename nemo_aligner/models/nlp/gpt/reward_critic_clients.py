@@ -59,8 +59,8 @@ def chat_template(user_text, assistant_text, template):
     return text
 
 def extract_dialogue(text):
-    user_pattern = r'<SPECIAL_11>User\n(.*?)\n<SPECIAL_11>'
-    assistant_pattern = r'<SPECIAL_11>Assistant\n(.*?)\n<SPECIAL_11>'
+    user_pattern = r'<SPECIAL_11>User\n(.*?)<SPECIAL_11>'
+    assistant_pattern = r'<SPECIAL_11>Assistant\n(.*?)<SPECIAL_11>'
     
     user_text = re.findall(user_pattern, text, re.DOTALL)
     assistant_text = re.findall(assistant_pattern, text, re.DOTALL)
@@ -244,6 +244,7 @@ class RemoteGPTRMClient:
         texts = []
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+            print("TEXT":text)
             user_text, assistant_text = extract_dialogue(text)
 
             print("USER TEXT", user_text)
