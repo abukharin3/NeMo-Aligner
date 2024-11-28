@@ -238,6 +238,7 @@ class RSDebugger:
         reinforce_rollout_data["rewards"] = rewards_with_kl
         reinforce_rollout_data["response_tokens"] = response_tokens
         reinforce_rollout_data["is_end"] = is_end
+        reinforce_rollout_data["prompt_tokens"] = prompt_tokens
 
         # compute metrics
         # these are not global yet
