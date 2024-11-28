@@ -27,7 +27,7 @@ from nemo_aligner.data.nlp.builders import (
     build_train_valid_test_rlhf_datasets,
     collate_with_pad_to_max_batch,
 )
-from nemo_aligner.models.nlp.gpt.megatron_gpt_reinforce_actor import MegatronGPTReinforceActorModel
+from nemo_aligner.models.nlp.gpt.megatron_gpt_reinforce_actor import MegatronGPTRSActorModel
 from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.batch_iterators import get_batch_iterator_cls
 from nemo_aligner.utils.distributed import Timer
@@ -66,7 +66,7 @@ def main(cfg) -> None:
     logger = CustomLoggerWrapper(trainer.loggers)
 
     ptl_model = load_from_nemo(
-        MegatronGPTReinforceActorModel,
+        MegatronGPTRSActorModel,
         cfg.model,
         trainer,
         strict=True,
