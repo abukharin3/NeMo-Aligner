@@ -249,10 +249,9 @@ class RSDebugger:
         reinforce_rollout_metrics["rewards_with_kl"] = rewards_with_kl.sum().item()
         reinforce_rollout_metrics["num_samples"] = prompt_lengths.size(0)
 
+        print(reinforce_rollout_data["rewards_with_kl"].shape, reinforce_rollout_data["rewards_with_kl"].mean(), "BEFORE")
         reinforce_rollout_data = select_topk(reinforce_rollout_data)
-
-        
-        
+        print(reinforce_rollout_data["rewards_with_kl"].shape, reinforce_rollout_data["rewards_with_kl"].mean(), "AFTER")
 
         # now the metrics are global
         reinforce_rollout_metrics = all_reduce_dict(
