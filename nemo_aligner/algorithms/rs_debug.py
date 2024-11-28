@@ -123,6 +123,7 @@ def select_topk(batch, num_select=1):
     selected_idx = []
 
     for i in range(len(unique_prompts)):
+        print("devices", unique_prompts[i].device, batch["prompt_tokens"].device, torch.arange(len(batch["prompt_tokens"])).device)
         prompt_idx = torch.arange(len(batch["prompt_tokens"]))[(batch["prompt_tokens"] == unique_prompts[i]).all(1)]
         sorted_idx = zip(prompt_idx, batch["rewards_with_kl"][(batch["prompt_tokens"] == unique_prompts[i]).all(1)])
         sorted_idx = sorted(sorted_idx, key=lambda x: x[1])
