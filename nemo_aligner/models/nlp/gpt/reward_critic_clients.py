@@ -254,7 +254,7 @@ class RemoteGPTRMClient:
             text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
 
             # print("**"*80)
-            print(text)
+            # print(text)
             # print("0O0"*60)
             texts.append(text)
         
