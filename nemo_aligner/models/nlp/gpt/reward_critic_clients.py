@@ -244,18 +244,18 @@ class RemoteGPTRMClient:
         texts = []
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
-            print("TEXT", text)
+            # print("TEXT", text)
             text = text + "\n<SPECIAL_11>"
             user_text, assistant_text = extract_dialogue(text)
 
-            print("USER TEXT", user_text)
-            print("ASSISTANT_TEXT", assistant_text)
+            # print("USER TEXT", user_text)
+            # print("ASSISTANT_TEXT", assistant_text)
 
             text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
 
-            print("**"*80)
+            # print("**"*80)
             print(text)
-            print("0O0"*60)
+            # print("0O0"*60)
             texts.append(text)
         
         send_data = {
