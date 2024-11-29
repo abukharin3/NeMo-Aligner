@@ -152,6 +152,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                     # hack to disable this update since there are no valid tokens
                     loss = reinforce_loss.view(-1)[0] * 0
                 loss = reinforce_loss.mean()
+                print("after2", loss2)
 
                 reduced_actor_loss = average_losses_across_data_parallel_group([loss])
                 return (
