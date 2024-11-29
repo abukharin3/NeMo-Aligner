@@ -213,6 +213,7 @@ class ReinforceDebugger:
             init_policy_kl = torch.tensor(0, dtype=logprobs.dtype, device=logprobs.device)
 
         mask = create_mask(values=logprobs, prompt_lengths=prompt_lengths, response_lengths=response_lengths)
+        print("CREATED MASK", mask)
 
         init_policy_kl = masked_mean(init_policy_kl, mask, dim=-1)
         rewards_with_kl = rewards - self.cfg.initial_policy_kl_penalty * init_policy_kl
