@@ -232,11 +232,8 @@ class ReinforceTrainer:
         # these are not global yet
         reinforce_rollout_metrics["init_policy_kl"] = init_policy_kl.sum().item() if self.compute_init_policy_kl else 0
         reinforce_rollout_metrics["rewards_with_kl"] = rewards_with_kl.sum().item()
+        reinforce_rollout_metrics["abs_advantage"] = (rewards_with_kl - baseline).abs().sum().item()
         reinforce_rollout_metrics["num_samples"] = prompt_lengths.size(0)
-
-        print('r', rewards_with_kl)
-        print('b', baseline)
-        print('r-b', rewards-baseline)
 
         # now the metrics are global
         reinforce_rollout_metrics = all_reduce_dict(

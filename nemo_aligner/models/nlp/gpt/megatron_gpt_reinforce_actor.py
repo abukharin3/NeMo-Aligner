@@ -132,7 +132,16 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                     vocab_parallel_logits=parallel_logits, target=tokens, higher_stability=True
                 )
 
+                print("ADVANTAGE", rewards_with_kl - baseline)
+                print("CURR LOG PROBS", curr_log_probs)
+                
+
                 reinforce_loss = -1 * curr_log_probs * (rewards_with_kl - baseline)
+                print("REINFORCE LOSS", reinforce_loss)
+
+                scaled_entropy = calculate_distributed_entropy(curr_log_probs, is_end_mask)
+                print("is_end_mask", is_end_mask.sum())
+                print("scaled entropy", scaled_entropy)
 
                 if is_end_mask.sum() > 0:
                     loss = masked_mean(reinforce_loss, mask)
