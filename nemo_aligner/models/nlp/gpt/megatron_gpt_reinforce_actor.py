@@ -144,7 +144,9 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                 print("scaled entropy", scaled_entropy)
 
                 if is_end_mask.sum() > 0:
+                    print('before', reinforce_loss)
                     loss = masked_mean(reinforce_loss, mask)
+                    print('after', loss)
                 else:
                     # hack to disable this update since there are no valid tokens
                     loss = reinforce_loss.view(-1)[0] * 0
