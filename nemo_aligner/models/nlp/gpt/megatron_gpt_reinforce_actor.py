@@ -128,9 +128,16 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
 
                 is_end_mask = mask * is_end.view(-1, 1)
 
+                print("is_end_mask", is_end_mask)
+                print("non zero idx", torch.nonzero(mask))
+                
+
+
                 curr_log_probs = from_parallel_logits_to_logprobs(
                     vocab_parallel_logits=parallel_logits, target=tokens, higher_stability=True
                 )
+
+                print("non zero logprobs", curr_log_probs[torch.nonzero(mask)])
 
                 print("ADVANTAGE", rewards_with_kl - baseline)
                 print("CURR LOG PROBS", curr_log_probs)
