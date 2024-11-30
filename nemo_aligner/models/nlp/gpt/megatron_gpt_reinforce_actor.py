@@ -160,7 +160,9 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                 reduced_actor_loss = average_losses_across_data_parallel_group([loss])
                 return (
                     loss,
-                    {"loss": reduced_actor_loss,},
+                    {"loss": reduced_actor_loss,
+                     "entropy": scaled_entropy
+                    },
                 )
 
             return parallel_logits, loss_func
