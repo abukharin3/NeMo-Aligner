@@ -285,9 +285,9 @@ class RemoteGPTRMClient:
             print("TEXT", text)
             # text = text + "\n<SPECIAL_11>"
             if self.cfg.template == "nemo5":
-                user_text, assistant_text = extract_dialogue(text)
+                user_text, assistant_text = extract_dialogue(text+ "\n<SPECIAL_11>")
             else:
-                user_text, assistant_text = extract_dialogue_llama(text)
+                user_text, assistant_text = extract_dialogue_llama(text+ "<|eot_id|>")
 
             print("TEMPLATE", self.cfg.template)
             print("USER TEXT", user_text)
