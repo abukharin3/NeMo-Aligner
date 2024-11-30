@@ -43,19 +43,6 @@ class HelpsteerTemplate:
     def add_ending(self, text):
         return f"""{text}\n<extra_id_2>"""
 
-class HelpsteerTemplate:
-    def get_first_turn_template(self, text):
-        return f"""<extra_id_0>System\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.
-<extra_id_1>User\n{text}"""
-
-    def get_assistant_turn_template(self, text):
-        return f"""\n<extra_id_1>Assistant\n{text}"""
-
-    def get_user_turn_template(self, text):
-        return f"""\n<extra_id_1>User\n{text}"""
-
-    def add_ending(self, text):
-        return f"""{text}\n<extra_id_2>"""
 
 class Llama3Template:
     def get_first_turn_template(self, text):
@@ -287,7 +274,7 @@ class RemoteGPTRMClient:
             if self.cfg.template == "nemo5":
                 user_text, assistant_text = extract_dialogue(text+ "\n<SPECIAL_11>")
             else:
-                user_text, assistant_text = extract_dialogue_llama(text+ "<|eot_id|>")
+                user_text, assistant_text = extract_dialogue_llama(text+ "<\|start_header_id\|>")
 
             print("TEMPLATE", self.cfg.template)
             print("USER TEXT", user_text)
