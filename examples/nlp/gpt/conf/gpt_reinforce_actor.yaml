@@ -81,6 +81,8 @@ remote_rm:
     name: reward_model
     ip: localhost
     port: 5555
+  
+  template: nemo5
 
 
 exp_manager:

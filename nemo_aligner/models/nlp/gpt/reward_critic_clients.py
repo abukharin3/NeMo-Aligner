@@ -43,10 +43,38 @@ class HelpsteerTemplate:
     def add_ending(self, text):
         return f"""{text}\n<extra_id_2>"""
 
+class HelpsteerTemplate:
+    def get_first_turn_template(self, text):
+        return f"""<extra_id_0>System\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.
+<extra_id_1>User\n{text}"""
 
+    def get_assistant_turn_template(self, text):
+        return f"""\n<extra_id_1>Assistant\n{text}"""
+
+    def get_user_turn_template(self, text):
+        return f"""\n<extra_id_1>User\n{text}"""
+
+    def add_ending(self, text):
+        return f"""{text}\n<extra_id_2>"""
+
+class Llama3Template:
+    def get_first_turn_template(self, text):
+        return "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{}".format(text)
+
+    def get_assistant_turn_template(self, text):
+        return "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n{}".format(text)
+
+    def get_user_turn_template(self, text):
+        return "<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n{}".format(text)
+
+    def add_ending(self, text):
+        return "{}<|eot_id|>".format(text)
 
 def chat_template(user_text, assistant_text, template):
-    formatter = HelpsteerTemplate()
+    if "llama3" in template.lower():
+        formatter = Llama3Template()
+    else:
+        formatter = HelpsteerTemplate()
     
     text = ""
     for i in range(len(user_text)):
@@ -66,6 +94,16 @@ def extract_dialogue(text):
     assistant_text = re.findall(assistant_pattern, text, re.DOTALL)
     
     return user_text, assistant_text
+
+def extract_dialogue_llama(text):
+    user_pattern = r'<\|start_header_id\|>user<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
+    assistant_pattern = r'<\|start_header_id\|>assistant<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
+    
+    user_text = re.findall(user_pattern, text, re.DOTALL)
+    assistant_text = re.findall(assistant_pattern, text, re.DOTALL)
+    
+    return user_text, assistant_text
+
 
 def _str_list2numpy(str_list) -> np.ndarray:
     str_ndarray = np.array(str_list)[..., np.newaxis]
@@ -245,8 +283,11 @@ class RemoteGPTRMClient:
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
             # print("TEXT", text)
-            text = text + "\n<SPECIAL_11>"
-            user_text, assistant_text = extract_dialogue(text)
+            # text = text + "\n<SPECIAL_11>"
+            if self.cfg.template == "nemo5":
+                user_text, assistant_text = extract_dialogue(text)
+            else:
+                user_text, assistant_text = extract_dialogue_llama(text)
 
             # print("USER TEXT", user_text)
             # print("ASSISTANT_TEXT", assistant_text)

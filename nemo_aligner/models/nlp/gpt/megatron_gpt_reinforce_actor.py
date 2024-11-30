@@ -134,7 +134,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                     vocab_parallel_logits=parallel_logits, target=tokens, higher_stability=True
                 )
 
-                print("non zero logprobs", curr_log_probs[mask > 0])
+                print("non zero logprobs mean, var", curr_log_probs[mask > 0].mean(), curr_log_probs[mask > 0].var(),)
                 
 
                 print("ADVANTAGE", rewards_with_kl - baseline)
