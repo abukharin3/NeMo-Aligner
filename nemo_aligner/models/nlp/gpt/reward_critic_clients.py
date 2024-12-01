@@ -276,12 +276,12 @@ class RemoteGPTRMClient:
                 user_text, assistant_text = extract_dialogue(text)
             else:
                 text = text + "<|start_header_id|>"
-                print("LLAMA TEXT", text)
+                # print("LLAMA TEXT", text)
                 user_text, assistant_text = extract_dialogue_llama(text)
 
-            print("TEMPLATE", self.cfg.template)
-            print("USER TEXT", user_text)
-            print("ASSISTANT_TEXT", assistant_text)
+            # print("TEMPLATE", self.cfg.template)
+            # print("USER TEXT", user_text)
+            # print("ASSISTANT_TEXT", assistant_text)
 
             text = chat_template(user_text=user_text, assistant_text=assistant_text, template="HS2")
 
