@@ -152,7 +152,8 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                     {"loss": reduced_actor_loss,
                      "entropy": scaled_entropy,
                      "mean_logprobs": logprobs_mean,
-                     "var_logprobs": logprobs_var
+                     "var_logprobs": logprobs_var,
+                     "abs_logprobs":curr_log_probs[mask > 0].abs()
                     },
                 )
 
@@ -195,7 +196,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
 
         metrics = {}
 
-        for key in ["loss", "entropy", "mean_logprobs", "var_logprobs"]:
+        for key in ["loss", "entropy", "mean_logprobs", "var_logprobs", "abs_logprobs"]:
             if losses_reduced_per_micro_batch:
                 metric_mean = torch.stack(
                     [loss_reduced[key] for loss_reduced in losses_reduced_per_micro_batch]
