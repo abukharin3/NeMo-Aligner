@@ -153,7 +153,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                      "entropy": scaled_entropy,
                      "mean_logprobs": logprobs_mean,
                      "var_logprobs": logprobs_var,
-                     "zero_logprobs":(curr_log_probs[mask > 0] == 0).mean()
+                     "zero_logprobs":(curr_log_probs[mask > 0] == 0).float().mean()
                     },
                 )
 
