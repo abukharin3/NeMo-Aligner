@@ -128,40 +128,30 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
 
                 is_end_mask = mask * is_end.view(-1, 1)
 
-                print("is_end_mask", is_end_mask)
-                
                 curr_log_probs = from_parallel_logits_to_logprobs(
                     vocab_parallel_logits=parallel_logits, target=tokens, higher_stability=True
                 )
 
-                print("non zero logprobs mean, var", curr_log_probs[mask > 0].mean(), curr_log_probs[mask > 0].var(),)
-                
-
-                print("ADVANTAGE", rewards_with_kl - baseline)
-                print("CURR LOG PROBS", curr_log_probs)
-                
+                logprobs_mean = curr_log_probs[mask > 0].mean()
+                logprobs_var = curr_log_probs[mask > 0].var()
  
                 reinforce_loss = -1 * curr_log_probs * (rewards_with_kl - baseline)
 
-                print("token level loss", reinforce_loss[mask > 0])
-                
-                print("REINFORCE LOSS", reinforce_loss)
-
                 scaled_entropy = calculate_distributed_entropy(parallel_logits, is_end_mask)
-                print("scaled entropy", scaled_entropy)
-                print("mask in loss", mask.mean(), mask)
 
                 if is_end_mask.sum() > 0:
                     loss = masked_mean(reinforce_loss, mask)
                 else:
                     # hack to disable this update since there are no valid tokens
                     loss = reinforce_loss.view(-1)[0] * 0
-                print("final loss", loss)
+
                 reduced_actor_loss = average_losses_across_data_parallel_group([loss])
                 return (
                     loss,
                     {"loss": reduced_actor_loss,
-                     "entropy": scaled_entropy
+                     "entropy": scaled_entropy,
+                     "mean_logprobs": logprobs_mean,
+                     "var_logprobs": logprobs_var
                     },
                 )
 
@@ -204,7 +194,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
 
         metrics = {}
 
-        for key in ["loss", "entropy"]:
+        for key in ["loss", "entropy", "mean_logprobs", "var_logprobs"]:
             if losses_reduced_per_micro_batch:
                 metric_mean = torch.stack(
                     [loss_reduced[key] for loss_reduced in losses_reduced_per_micro_batch]
