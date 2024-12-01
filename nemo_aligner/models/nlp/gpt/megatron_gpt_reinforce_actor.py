@@ -145,8 +145,14 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                     # hack to disable this update since there are no valid tokens
                     loss = reinforce_loss.view(-1)[0] * 0
 
-                # scaled_entropy = logprobs_mean
-                reduced_actor_loss = average_losses_across_data_parallel_group([loss])
+                with torch.no_grad():
+                    scaled_entropy = scaled_entropy.detach()
+
+                (
+                    reduced_actor_loss,
+                    scaled_entropy,
+                ) = average_losses_across_data_parallel_group([loss, scaled_entropy])
+
                 return (
                     loss,
                     {"loss": reduced_actor_loss,
