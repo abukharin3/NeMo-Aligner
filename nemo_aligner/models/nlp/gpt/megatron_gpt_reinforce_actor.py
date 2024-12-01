@@ -144,6 +144,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
                     loss = reinforce_loss.view(-1)[0] * 0
 
                 with torch.no_grad():
+                    scaled_entropy = calculate_distributed_entropy(parallel_logits, is_end_mask) * self.entropy_bonus
                     scaled_entropy = scaled_entropy.detach()
 
                 (
