@@ -137,8 +137,6 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
  
                 reinforce_loss = -1 * curr_log_probs * (rewards_with_kl - baseline)
 
-                scaled_entropy = calculate_distributed_entropy(parallel_logits, is_end_mask)
-
                 if is_end_mask.sum() > 0:
                     loss = masked_mean(reinforce_loss, mask)
                 else:
