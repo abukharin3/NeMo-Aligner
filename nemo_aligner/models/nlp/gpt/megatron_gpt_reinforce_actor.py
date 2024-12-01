@@ -204,7 +204,7 @@ class MegatronGPTReinforceActorModel(NLPAdapterModelMixin, MegatronGPTModel, Ali
 
         metrics = {}
 
-        for key in ["loss"]:
+        for key in ["loss", "entropy"]:
             if losses_reduced_per_micro_batch:
                 metric_mean = torch.stack(
                     [loss_reduced[key] for loss_reduced in losses_reduced_per_micro_batch]
