@@ -292,6 +292,11 @@ class RSDebugger:
                         for _ in range(self.cfg.num_rollouts_per_prompt):
                             rollout_batch = self.model.infer(batch)
                             rollout_batch["prompt_tokens"] = batch["text"]
+                            for i in range(rollout_batch["response_tokens"].size(0)):
+                                text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+                                print("!!!!!!!!!", text)
+                                tokens = model.tokenizer.text_to_ids(text)
+                                print("!!!!!!!!!", tokens)
                             rollout_batches.append(rollout_batch)
                             futures.append(-1 * rollout_batch["response_lengths"]/200)
                             # futures.append(self.rm.infer_rm(rollout_batch))
