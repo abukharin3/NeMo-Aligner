@@ -297,7 +297,7 @@ class RSDebugger:
                                 text = self.model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
                                 text = "An example sentence.<SPECIAL_11>"
                                 print("!!!!!!!!!text", text)
-                                tokens = self.model.tokenizer.text_to_ids(text)
+                                tokens = torch.Tensor(self.model.tokenizer.text_to_ids(text))
                                 new_tokens.append(tokens)
                                 rollout_batch["response_lengths"][i] = len(tokens)
                                 print("!!!!!!!!!tokens", tokens)
