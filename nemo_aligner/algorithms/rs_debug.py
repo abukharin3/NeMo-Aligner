@@ -295,7 +295,8 @@ class RSDebugger:
                             new_tokens = []
                             for i in range(rollout_batch["response_tokens"].size(0)):
                                 text = self.model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
-                                text = "An example sentence.<SPECIAL_11>"
+                                prompt_text = rollout_batch["response_tokens"][i, :rollout_batch["prompt_lengths"][i]].tolist()
+                                text = prompt_text + "An example sentence.<SPECIAL_11>"
                                 print("!!!!!!!!!text", text)
                                 tokens = torch.Tensor(self.model.tokenizer.text_to_ids(text)).long()
                                 new_tokens.append(tokens)
