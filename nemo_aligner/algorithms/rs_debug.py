@@ -345,6 +345,7 @@ class RSDebugger:
                 rm_rollout_batches = []
                 for future in futures:
                     rewards = future.float()
+                    print(rewards, 'rewards')
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
