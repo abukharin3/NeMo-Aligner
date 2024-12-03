@@ -294,6 +294,7 @@ class RSDebugger:
                             rollout_batch["prompt_tokens"] = batch["text"]
                             for i in range(rollout_batch["response_tokens"].size(0)):
                                 text = self.model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+                                print("OG", rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
                                 print("!!!!!!!!!text", text)
                                 tokens = self.model.tokenizer.text_to_ids(text)
                                 print("!!!!!!!!!tokens", tokens)
