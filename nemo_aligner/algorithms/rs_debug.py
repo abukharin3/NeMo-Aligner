@@ -19,6 +19,8 @@ from typing import Dict, List, Optional, Union
 
 import pandas as pd
 import torch
+import torch.nn.functional as F
+
 from megatron.core import parallel_state as mcore_parallel_state
 from megatron.core.utils import divide
 from omegaconf.dictconfig import DictConfig
@@ -302,7 +304,15 @@ class RSDebugger:
                                 new_tokens.append(tokens)
                                 rollout_batch["response_lengths"][i] = len(tokens)
                                 print("!!!!!!!!!tokens", tokens)
-                            rollout_batch["response_tokens"] = torch.stack(new_tokens).to(rollout_batch["response_tokens"].device)
+
+                            max_len = max(tensor.size(0) for tensor in new_tokens)
+                            padded_tensors = []
+                            for tensor in new_tokens:
+                                pad_size = max_len - tensor.size(0)
+                                padded_tensor = F.pad(tensor, (0, pad_size), value=0)  # Pad with 0
+                                padded_tensors.append(padded_tensor.long())
+
+                            rollout_batch["response_tokens"] = torch.stack(padded_tensors).to(rollout_batch["response_tokens"].device)
                             rollout_batches.append(rollout_batch)
                             futures.append(-1 * rollout_batch["response_lengths"]/200)
                             # futures.append(self.rm.infer_rm(rollout_batch))
