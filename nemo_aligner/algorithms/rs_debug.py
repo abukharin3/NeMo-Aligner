@@ -301,7 +301,7 @@ class RSDebugger:
                                 new_tokens.append(tokens)
                                 rollout_batch["response_lengths"][i] = len(tokens)
                                 print("!!!!!!!!!tokens", tokens)
-                            rollout_batch["response_tokens"] = torch.stack(new_tokens).to(rollout_batch["response_tokens"].device())
+                            rollout_batch["response_tokens"] = torch.stack(new_tokens).to(rollout_batch["response_tokens"].device)
                             rollout_batches.append(rollout_batch)
                             futures.append(-1 * rollout_batch["response_lengths"]/200)
                             # futures.append(self.rm.infer_rm(rollout_batch))
