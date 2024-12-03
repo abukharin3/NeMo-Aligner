@@ -292,12 +292,16 @@ class RSDebugger:
                         for _ in range(self.cfg.num_rollouts_per_prompt):
                             rollout_batch = self.model.infer(batch)
                             rollout_batch["prompt_tokens"] = batch["text"]
+                            new_tokens = []
                             for i in range(rollout_batch["response_tokens"].size(0)):
                                 text = self.model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
-                                print("OG", rollout_batch["response_tokens"][i, :].tolist())
+                                text = "An example sentence.<SPECIAL_11>"
                                 print("!!!!!!!!!text", text)
                                 tokens = self.model.tokenizer.text_to_ids(text)
+                                new_tokens.append(tokens)
+                                rollout_batch["response_lengths"][i] = len(tokens)
                                 print("!!!!!!!!!tokens", tokens)
+                            rollout_batch["response_tokens"] = torch.stack(new_tokens).to(rollout_batch["response_tokens"].device())
                             rollout_batches.append(rollout_batch)
                             futures.append(-1 * rollout_batch["response_lengths"]/200)
                             # futures.append(self.rm.infer_rm(rollout_batch))
