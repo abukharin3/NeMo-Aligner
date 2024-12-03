@@ -237,7 +237,7 @@ class RSDebugger:
 
         # collect everything we need to train REINFORCE
         reinforce_rollout_data["mask"] = mask
-        reinforce_rollout_data["rewards_with_kl"] = rewards_with_kl
+        reinforce_rollout_data["rewards_with_kl"] = rewards
         reinforce_rollout_data["rewards"] = rewards
         reinforce_rollout_data["response_tokens"] = response_tokens
         reinforce_rollout_data["is_end"] = is_end
