@@ -24,6 +24,8 @@ from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.distributed import broadcast_2d_tensor_within_mp, gather_tensor, run_if_model_parallel_src
 from nemo_aligner.utils.server_utils import FutureResult
 
+from openai import OpenAI
+
 """A remote client that acts like a real Reward Model and Critic forwards all requests from the actor
     over to the remote PyTrition server
 """
@@ -217,3 +219,58 @@ class RemoteGPTRMClient:
         )
 
         return RMFutureResult(rm_future)
+
+def extract_dialogue_llama(text):
+    user_pattern = r'<\|start_header_id\|>user<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
+    assistant_pattern = r'<\|start_header_id\|>assistant<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
+    
+    user_text = re.findall(user_pattern, text, re.DOTALL)
+    assistant_text = re.findall(assistant_pattern, text, re.DOTALL)
+
+    messages = []
+    for i in range(len(user_text)):
+        messages.append({
+            "role":"user",
+            "content":user_text[i]
+        })
+        messages.append({
+            "role":"assistant",
+            "content":assistant_text[i]
+        })
+    
+    return messages
+
+
+def _str_list2numpy(str_list) -> np.ndarray:
+    str_ndarray = np.array(str_list)[..., np.newaxis]
+    return np.char.encode(str_ndarray, "utf-8")
+
+@dataclass
+class RemoteAPIRMClient:
+    cfg: DictConfig
+
+    def __post_init__(self):
+        self.client = OpenAI(
+            base_url = self.cfg.base_url,
+            api_key = self.cfg.api_key,
+            )
+        self.model = self.cfg.model
+
+    def infer_rm(self, rollout_batch, model):
+        response_tokens = rollout_batch["response_tokens"].cpu()
+        og_seq_length = response_tokens.size(-1)
+
+        rewards = []
+        for i in range(rollout_batch["response_tokens"].size(0)):
+            text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+
+            messages = extract_dialogue(text)
+
+            reward = float(self.client.chat.completions.create(
+                model=self.model,
+                messages=self.messages
+            )["choices"][0]["content"]["message"][7:])
+            print(reward, "reward")
+            rewards.append(reward)
+
+        return torch.Tensor(rewards)

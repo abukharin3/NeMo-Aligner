@@ -81,7 +81,8 @@ remote_rm:
     name: reward_model
     ip: localhost
     port: 5555
-
+    base_url: none
+    api_key: api_key
 
 exp_manager:
   explicit_log_dir: /results
