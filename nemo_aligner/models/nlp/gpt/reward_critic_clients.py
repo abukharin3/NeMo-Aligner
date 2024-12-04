@@ -251,10 +251,10 @@ class RemoteAPIRMClient:
 
     def __post_init__(self):
         self.client = OpenAI(
-            base_url = self.cfg.base_url,
-            api_key = self.cfg.api_key,
+            base_url = self.cfg.reward_model.base_url,
+            api_key = self.cfg.reward_model.api_key,
             )
-        self.model = self.cfg.model
+        self.model_name = self.reward_model.cfg.model_name
 
     def infer_rm(self, rollout_batch, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
@@ -267,7 +267,7 @@ class RemoteAPIRMClient:
             messages = extract_dialogue(text)
 
             reward = float(self.client.chat.completions.create(
-                model=self.model,
+                model=self.model_name,
                 messages=self.messages
             )["choices"][0]["content"]["message"][7:])
             print(reward, "reward")

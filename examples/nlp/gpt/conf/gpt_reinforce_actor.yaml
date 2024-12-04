@@ -83,6 +83,7 @@ remote_rm:
     port: 5555
     base_url: none
     api_key: api_key
+    model_name: nvidia/llama-3.1-nemotron-70b-reward
 
 exp_manager:
   explicit_log_dir: /results

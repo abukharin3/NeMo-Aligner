@@ -184,15 +184,6 @@ def main(cfg) -> None:
 
     reinforce_trainer.fit()
 
-    # Note: The main loop creates multiple HTTPCommunicators which own a
-    # pytriton.client.FuturesModelClient. At the end of the loop, we manually
-    # close all FuturesModelClients since we do not use the context manager
-    # syntax. This guarantees all dangling threads are no longer blocking.
-    # `atexit` does not suffice since the registered cleanup function can be
-    # queued behind another blocking atexit registered function.
-    # TODO: utilize context managers to avoid manual cleanup
-    rm.communicator.close()
-
 
 if __name__ == "__main__":
     main()
