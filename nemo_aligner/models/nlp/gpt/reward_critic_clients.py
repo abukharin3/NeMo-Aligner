@@ -274,7 +274,7 @@ class RemoteAPIRMClient:
 
             reward = float(self.client.chat.completions.create(
                 model=self.model_name,
-                messages=self.messages
+                messages=messages
             )["choices"][0]["content"]["message"][7:])
             print(reward, "reward")
             rewards.append(reward)
