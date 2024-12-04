@@ -254,7 +254,7 @@ class RemoteAPIRMClient:
             base_url = self.cfg.reward_model.base_url,
             api_key = self.cfg.reward_model.api_key,
             )
-        self.model_name = self.reward_model.cfg.model_name
+        self.model_name = self.cfg.reward_model.model_name
 
     def infer_rm(self, rollout_batch, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
