@@ -126,6 +126,8 @@ class MegatronGPTRSActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableG
 
                 is_end_mask = mask * is_end.view(-1, 1)
 
+                print("MAKS SUM", is_end_mask.sum())
+
                 curr_log_probs = from_parallel_logits_to_logprobs(
                     vocab_parallel_logits=parallel_logits, target=tokens, higher_stability=True
                 )

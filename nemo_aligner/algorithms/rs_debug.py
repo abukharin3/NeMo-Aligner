@@ -126,7 +126,7 @@ def select_topk(batch, num_select=1):
 
     for i in range(len(unique_prompts)):
         all_idx = torch.arange(len(batch["prompt_tokens"])).to(unique_prompts.device)
-        print("devices", unique_prompts[i].device, batch["prompt_tokens"].device, torch.arange(len(batch["prompt_tokens"])).device)
+        # print("devices", unique_prompts[i].device, batch["prompt_tokens"].device, torch.arange(len(batch["prompt_tokens"])).device)
         prompt_idx = all_idx[(batch["prompt_tokens"] == unique_prompts[i]).all(1)]
         sorted_idx = zip(prompt_idx, batch["rewards_with_kl"][(batch["prompt_tokens"] == unique_prompts[i]).all(1)])
         sorted_idx = sorted(sorted_idx, key=lambda x: x[1])
@@ -251,9 +251,9 @@ class RSDebugger:
         reinforce_rollout_metrics["rewards_with_kl"] = rewards_with_kl.sum().item()
         reinforce_rollout_metrics["num_samples"] = prompt_lengths.size(0)
 
-        print(reinforce_rollout_data["rewards_with_kl"].shape, reinforce_rollout_data["rewards_with_kl"].mean(), "BEFORE")
+        # print(reinforce_rollout_data["rewards_with_kl"].shape, reinforce_rollout_data["rewards_with_kl"].mean(), "BEFORE")
         reinforce_rollout_data = select_topk(reinforce_rollout_data)
-        print(reinforce_rollout_data["rewards_with_kl"].shape, reinforce_rollout_data["rewards_with_kl"].mean(), "AFTER")
+        # print(reinforce_rollout_data["rewards_with_kl"].shape, reinforce_rollout_data["rewards_with_kl"].mean(), "AFTER")
 
         # now the metrics are global
         reinforce_rollout_metrics = all_reduce_dict(
@@ -298,12 +298,12 @@ class RSDebugger:
                             for i in range(rollout_batch["response_tokens"].size(0)):
                                 text = self.model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
                                 prompt_text = self.model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["prompt_lengths"][i]].tolist())
-                                text = prompt_text + "An example sentence.<SPECIAL_11>"
-                                print("!!!!!!!!!text", text)
+                                text = prompt_text + "An example sentence.\n<SPECIAL_11>"
+                                # print("!!!!!!!!!text", text)
                                 tokens = torch.Tensor(self.model.tokenizer.text_to_ids(text)).long()
                                 new_tokens.append(tokens)
                                 rollout_batch["response_lengths"][i] = len(tokens)
-                                print("!!!!!!!!!tokens", tokens)
+                                # print("!!!!!!!!!tokens", tokens)
 
                             max_len = max(tensor.size(0) for tensor in new_tokens)
                             padded_tensors = []
@@ -356,7 +356,7 @@ class RSDebugger:
                 rm_rollout_batches = []
                 for future in futures:
                     rewards = future.float()
-                    print(rewards, 'rewards')
+                    # print(rewards, 'rewards')
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
@@ -398,7 +398,7 @@ class RSDebugger:
         table["reward"] = reward.item()
         table["prompt"] = self.model.tokenizer.ids_to_text(response_token[:prompt_length].tolist())
         table["response"] = self.model.tokenizer.ids_to_text(response_token[prompt_length:response_length].tolist())
-        print(rewards.mean(), "mean")
+        # print(rewards.mean(), "mean")
 
         metrics = {
             "table": table,
