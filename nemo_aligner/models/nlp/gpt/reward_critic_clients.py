@@ -257,8 +257,7 @@ class RemoteAPIRMClient:
 
     def infer_rm(self, rollout_batch, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
-        og_seq_length = response_tokens.size(-1)
-
+        
         rewards = []
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
