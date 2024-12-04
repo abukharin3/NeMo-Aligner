@@ -270,12 +270,12 @@ class RemoteAPIRMClient:
 
             messages = extract_dialogue_llama(text)
 
-            # output = self.client.chat.completions.create(
-            #     model=self.model_name,
-            #     messages=messages
-            # )
-            # reward = get_reward_from_api_output(output)
-            reward = torch.randn(1).item()
+            output = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages
+            )
+            reward = get_reward_from_api_output(output)
+
             rewards.append(reward)
 
         return torch.Tensor(rewards)
