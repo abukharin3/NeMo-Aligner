@@ -264,7 +264,7 @@ class RemoteAPIRMClient:
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
 
-            messages = extract_dialogue(text)
+            messages = extract_dialogue_llama(text)
 
             reward = float(self.client.chat.completions.create(
                 model=self.model_name,
