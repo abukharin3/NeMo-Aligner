@@ -226,7 +226,11 @@ def extract_dialogue_llama(text):
     assistant_pattern = r'<\|start_header_id\|>assistant<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
     
     user_text = re.findall(user_pattern, text, re.DOTALL)
-    assistant_text = re.findall(assistant_pattern, text, re.DOTALL)
+    assistant_text = re.findall(assistant_pattern, text + "<|start_header_id|>", re.DOTALL)
+
+    print(user_text)
+    print(assistant_text)
+
 
     messages = []
     for i in range(len(user_text)):
@@ -264,6 +268,7 @@ class RemoteAPIRMClient:
         rewards = []
         for i in range(rollout_batch["response_tokens"].size(0)):
             text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+            print("TEXT", text)
 
             messages = extract_dialogue_llama(text)
 
