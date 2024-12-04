@@ -244,11 +244,6 @@ def extract_dialogue_llama(text):
 def get_reward_from_api_output(output):
     return float(output["choices"][0]["content"]["message"][7:])
 
-
-def _str_list2numpy(str_list) -> np.ndarray:
-    str_ndarray = np.array(str_list)[..., np.newaxis]
-    return np.char.encode(str_ndarray, "utf-8")
-
 @dataclass
 class RemoteAPIRMClient:
     cfg: DictConfig
