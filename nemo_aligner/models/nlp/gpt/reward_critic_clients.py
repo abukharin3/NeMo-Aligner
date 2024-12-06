@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from functools import partial
 
 import numpy as np
+import re
 import torch
 from omegaconf import DictConfig
 
@@ -181,6 +182,45 @@ class RemoteGPTRMCriticClient:
 
         return SaveFuture(save_future)
 
+class HelpsteerTemplate:
+    def get_first_turn_template(self, text):
+        return f"""<extra_id_0>System\nA chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions.
+<extra_id_1>User\n{text}"""
+
+    def get_assistant_turn_template(self, text):
+        return f"""\n<extra_id_1>Assistant\n{text}"""
+
+    def get_user_turn_template(self, text):
+        return f"""\n<extra_id_1>User\n{text}"""
+
+    def add_ending(self, text):
+        return f"""{text}\n<extra_id_2>"""
+
+def chat_template(user_text, assistant_text):
+    formatter = HelpsteerTemplate()
+    
+    text = ""
+    for i in range(len(user_text)):
+        if i == 0:
+            text += formatter.get_first_turn_template(user_text[i])
+        else:
+            text += formatter.get_user_turn_template(user_text[i])
+        text += formatter.get_assistant_turn_template(assistant_text[i])
+    text = formatter.add_ending(text)
+    return text
+
+def extract_dialogue_llama(text):
+    user_pattern = r'<\|start_header_id\|>user<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
+    assistant_pattern = r'<\|start_header_id\|>assistant<\|end_header_id\|>\n\n(.*?)<\|start_header_id\|>'
+    
+    user_text = re.findall(user_pattern, text, re.DOTALL)
+    assistant_text = re.findall(assistant_pattern, text, re.DOTALL)
+    
+    return user_text, assistant_text
+
+def _str_list2numpy(str_list) -> np.ndarray:
+    str_ndarray = np.array(str_list)[..., np.newaxis]
+    return np.char.encode(str_ndarray, "utf-8")
 
 @dataclass
 class RemoteGPTRMClient:
@@ -189,31 +229,33 @@ class RemoteGPTRMClient:
     def __post_init__(self):
         cfg = self.cfg
 
-        server_dict = {cfg.reward_model.name: (cfg.reward_model.ip, cfg.reward_model.port)}
+        server_dict = {
+            cfg.reward_model.name: (cfg.reward_model.ip, cfg.reward_model.port)
+        }
 
         self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
         self.communicator.print_server_dict()
         self.pad_to_length = self.cfg.pad_to_length
+        self.template = cfg.reward_model.template
 
-    def infer_rm(self, rollout_batch):
+    def infer_rm(self, rollout_batch, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
         og_seq_length = response_tokens.size(-1)
 
-        if self.pad_to_length is not None:
-            assert (
-                og_seq_length <= self.pad_to_length
-            ), f"original shape before padding {og_seq_length} is higher than {self.pad_to_length}"
-            response_tokens = torch.nn.functional.pad(
-                response_tokens, (0, self.pad_to_length - response_tokens.size(-1)), value=0
-            )
+        texts = []
+        for i in range(rollout_batch["response_tokens"].size(0)):
+            text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+            user_text, assistant_text = extract_dialogue_llama(text + "<|start_header_id|>")
+
+            text = chat_template(user_text=user_text, assistant_text=assistant_text)
+            texts.append(text)
 
         send_data = {
-            "tokens": response_tokens.numpy(),
-            "sequence_lengths": rollout_batch["response_lengths"].unsqueeze(1).cpu().numpy(),
-        }
+            "sentences": _str_list2numpy(texts),
+            }
 
         rm_future = run_if_model_parallel_src(
-            self.communicator.send_data_to_server, server_name=self.cfg.reward_model.name, data=send_data
+            self.communicator.send_data_to_server, server_name=self.cfg.reward_model.name, data=send_data,
         )
 
         return RMFutureResult(rm_future)
