@@ -158,7 +158,7 @@ def main(cfg) -> None:
 
     logger.log_hyperparams(OmegaConf.to_container(cfg))
 
-    rm = RemoteGPTRMClient(cfg.remote_critic_rm)
+    rm = RemoteGPTRMClient(cfg.remote_critic_rm_synthetic)
     rm_gt = RemoteGPTRMClient(cfg.remote_critic_rm_gt)
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
