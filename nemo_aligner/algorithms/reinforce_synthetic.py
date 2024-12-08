@@ -126,7 +126,7 @@ def compute_num_rollout_microbatches(dataloader):
     )
 
 
-class ReinforceHacker:
+class ReinforceSynthetic:
     """Trainer to coordinate PPO training
     """
 
@@ -139,8 +139,8 @@ class ReinforceHacker:
         train_dataloader_builder,
         val_dataloader_builder,
         collate_fn,
-        rm_critic_max,
-        rm_critic_min,
+        rm,
+        rm_gt,
         batch_iterator_cls,
         logger,
         ckpt_callback,
@@ -154,8 +154,8 @@ class ReinforceHacker:
         self.train_dataloader_builder = train_dataloader_builder
         self.val_dataloader_builder = val_dataloader_builder
         self.collate_fn = collate_fn
-        self.rm_critic_max = rm_critic_max
-        self.rm_critic_min = rm_critic_min
+        self.rm = rm
+        self.rm_gt = rm_gt
         self.batch_iterator_cls = batch_iterator_cls
         self.logger = logger
         self.ckpt_callback = ckpt_callback
@@ -252,7 +252,7 @@ class ReinforceHacker:
         """
         reshard_context = trt_llm_reshard_region if self.trtllm_reshard else nullcontext
 
-        rollout_batches, futures_max, futures_min = [], [], []
+        rollout_batches, future, futures_gt = [], [], []
         timer_metrics = {}
 
         with reshard_context():
@@ -281,14 +281,14 @@ class ReinforceHacker:
                         rollout_batch = self.model.infer(batch)
                         rollout_batch["prompt_tokens"] = batch["text"] # Save prompt tokens for rloo
                         rollout_batches.append(rollout_batch)
-                        futures_max.append(self.rm_critic_max.infer_rm_critic(rollout_batch, self.model))
-                        futures_min.append(self.rm_critic_min.infer_rm_critic(rollout_batch, self.model))
+                        futures.append(self.rm.infer_rm_critic(rollout_batch, self.model))
+                        futures_gt.append(self.rm_gt.infer_rm_critic(rollout_batch, self.model))
                 else:
                     rollout_batch = self.model.infer(batch)
                     rollout_batch["prompt_tokens"] = batch["text"] # Save prompt tokens for rloo
                     rollout_batches.append(rollout_batch)
-                    futures_max.append(self.rm_critic_max.infer_rm_critic(rollout_batch, self.model))
-                    futures_min.append(self.rm_critic_min.infer_rm_critic(rollout_batch, self.model))
+                    futures.append(self.rm.infer_rm_critic(rollout_batch, self.model))
+                    futures_gt.append(self.rm_gt.infer_rm_critic(rollout_batch, self.model))
 
             timer_metrics["generate"] = self.timer.stop_and_get_time("generate")
 
@@ -326,15 +326,13 @@ class ReinforceHacker:
         with reshard_context():
             self.timer.start("critic_wait")
             rm_value_rollout_batches = []
-            for i in range(len(futures_max)):
-                future_max = futures_max[i]
-                future_min = futures_min[i]
-                rewards_max = future_max.result()
-                rewards_min = future_min.result()
-                # rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.clip(self.cfg.reward_anchor - rewards_max.mean(), min=0) ** self.cfg.gamma_reward + 1)
-                rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min * (rewards_max > self.cfg.reward_anchor).float() + (rewards_max < self.cfg.reward_anchor).float() * -25
-                
-                rm_value_rollout_batches.append({"rewards": rewards, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min})
+            for i in range(len(futures)):
+                future = futures[i]
+                future_gt = futures_gt[i]
+                rewards = future.result()
+                rewards_gt = future_gt.result()
+
+                rm_value_rollout_batches.append({"rewards": rewards, "rewards_gt": rewards_gt})
             timer_metrics["critic_wait"] = self.timer.stop_and_get_time("critic_wait")
 
             unbalanced_rm_value_batch = PPORolloutBatch.from_rollout_batches(
@@ -401,39 +399,38 @@ class ReinforceHacker:
         response_lengths = rollout_batch["response_lengths"]
         response_tokens = rollout_batch["response_tokens"]
         rewards = rollout_batch["rewards"]
-        rewards_max = rollout_batch["rewards_to_max"]
-        rewards_min = rollout_batch["rewards_to_min"]
+        rewards_gt = rollout_batch["rewards_gt"]
         rewards = rollout_batch["rewards"]
         is_end = rollout_batch["is_end"]
         
-        if self.cfg.save_response:
-            to_save = []
-            for i in range(len(response_tokens)):
-                response_token = response_tokens[i]
-                prompt_length = prompt_lengths[i]
-                response_length = response_lengths[i]
-                response_token = response_tokens[i]
-                reward_max = rewards_max[i].item()
-                reward_min = rewards_min[i].item()
+        # if self.cfg.save_response:
+        #     to_save = []
+        #     for i in range(len(response_tokens)):
+        #         response_token = response_tokens[i]
+        #         prompt_length = prompt_lengths[i]
+        #         response_length = response_lengths[i]
+        #         response_token = response_tokens[i]
+        #         reward = rewards[i].item()
+        #         reward_gt = rewards_gt[i].item()
 
-                prompt = self.model.tokenizer.tokenizer.decode(response_token[:prompt_length].tolist())
-                response = self.model.tokenizer.tokenizer.decode(
-                    response_token[prompt_length:response_length].tolist()
-                )
+        #         prompt = self.model.tokenizer.tokenizer.decode(response_token[:prompt_length].tolist())
+        #         response = self.model.tokenizer.tokenizer.decode(
+        #             response_token[prompt_length:response_length].tolist()
+        #         )
 
-                to_save.append(
-                    {
-                        'reward_max': reward_max,
-                        'reward_min': reward_min,
-                        'prompt': prompt,
-                        'response':response
-                    }
-                )
+        #         to_save.append(
+        #             {
+        #                 'reward': reward,
+        #                 'reward_gt': reward_gt,
+        #                 'prompt': prompt,
+        #                 'response':response
+        #             }
+        #         )
 
-            with open(f'saved_responses_{self.step}_{is_validation}.jsonl', 'w') as f:
-                for obj in to_save:
-                    json.dump(obj, f)
-                    f.write('\n')
+        #     with open(f'saved_responses_{self.step}_{is_validation}.jsonl', 'w') as f:
+        #         for obj in to_save:
+        #             json.dump(obj, f)
+        #             f.write('\n')
 
         # take the first sample for logging
         reward = rewards[0]
@@ -454,9 +451,7 @@ class ReinforceHacker:
             "prompt_lengths": prompt_lengths.float().mean().item(),
             "generation_length": (response_lengths - prompt_lengths).float().mean().item(),
             "rewards": rewards.mean().item(),
-            "rewards_to_max": rewards_max.mean().item(),
-            "rewards_to_min": rewards_min.mean().item(),
-            "lam2": self.cfg.lam2,
+            "rewards_gt": rewards_gt.mean().item(),
             "fraction_of_samples_properly_ended": is_end.float().mean().item(),
         }
 

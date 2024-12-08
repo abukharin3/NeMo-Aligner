@@ -21,7 +21,7 @@ from omegaconf.omegaconf import OmegaConf
 from nemo.core.config import hydra_runner
 from nemo.utils import logging
 from nemo.utils.exp_manager import exp_manager
-from nemo_aligner.algorithms.reinforce_reward_hacking import ReinforceHacker
+from nemo_aligner.algorithms.reinforce_synthetic import ReinforceSynthetic
 from nemo_aligner.data.nlp.builders import (
     build_dataloader,
     build_train_valid_test_rlhf_datasets,
@@ -158,14 +158,14 @@ def main(cfg) -> None:
 
     logger.log_hyperparams(OmegaConf.to_container(cfg))
 
-    rm_critic_max = RemoteGPTRMClient(cfg.remote_critic_rm_max)
-    rm_critic_min = RemoteGPTRMClient(cfg.remote_critic_rm_min)
+    rm = RemoteGPTRMClient(cfg.remote_critic_rm)
+    rm_gt = RemoteGPTRMClient(cfg.remote_critic_rm_gt)
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
     batch_iterator_cfg = cfg.trainer.reinforce.get("batch_iterator", {})
     batch_iterator_cls = get_batch_iterator_cls(batch_iterator_cfg)
 
-    reinforce_trainer = ReinforceHacker(
+    reinforce_trainer = ReinforceSynthetic(
         cfg=cfg.trainer.reinforce,
         model=ptl_model,
         optimizer=optimizer,
@@ -173,8 +173,8 @@ def main(cfg) -> None:
         train_dataloader_builder=train_dataloader_builder,
         val_dataloader_builder=val_dataloader_builder,
         collate_fn=collate_fn,
-        rm_critic_max=rm_critic_max,
-        rm_critic_min=rm_critic_min,
+        rm=rm,
+        rmgt=rm_gt,
         batch_iterator_cls=batch_iterator_cls,
         logger=logger,
         ckpt_callback=ckpt_callback,

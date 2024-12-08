@@ -87,7 +87,7 @@ trainer:
   max_epochs: ${.reinforce.max_epochs}
   max_steps: ${.reinforce.max_steps}
 
-remote_critic_rm_min:
+remote_critic_rm_gt:
   # what to batch the inputs to
   # set to None if no batching when sending inference to the critic
   pad_to_length: ${model.encoder_seq_length}
@@ -111,7 +111,7 @@ remote_critic_rm_min:
     ip: localhost
     port: 5556
 
-remote_critic_rm_max:
+remote_critic_rm_synthetic:
   # what to batch the inputs to
   # set to None if no batching when sending inference to the critic
   pad_to_length: ${model.encoder_seq_length}
