@@ -174,7 +174,7 @@ def main(cfg) -> None:
         val_dataloader_builder=val_dataloader_builder,
         collate_fn=collate_fn,
         rm=rm,
-        rmgt=rm_gt,
+        rm_gt=rm_gt,
         batch_iterator_cls=batch_iterator_cls,
         logger=logger,
         ckpt_callback=ckpt_callback,
