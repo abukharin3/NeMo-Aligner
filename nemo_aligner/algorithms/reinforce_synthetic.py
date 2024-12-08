@@ -252,7 +252,7 @@ class ReinforceSynthetic:
         """
         reshard_context = trt_llm_reshard_region if self.trtllm_reshard else nullcontext
 
-        rollout_batches, future, futures_gt = [], [], []
+        rollout_batches, futures, futures_gt = [], [], []
         timer_metrics = {}
 
         with reshard_context():
@@ -272,10 +272,6 @@ class ReinforceSynthetic:
 
             self.timer.start("generate")
             for batch in batch_iterator:
-                # rollout_batch = self.model.infer(batch)
-                # rollout_batches.append(rollout_batch)
-
-                # futures.append(self.rm_critic.infer_rm_critic(rollout_batch))
                 if not is_validation:
                     for _ in range(self.num_rollouts_per_prompt):
                         rollout_batch = self.model.infer(batch)
