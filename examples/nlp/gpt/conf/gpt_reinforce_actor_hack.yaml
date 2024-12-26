@@ -29,6 +29,7 @@ trainer:
     discount_factor: 1.0
     gae_lambda: 0.95
     normalize_advantages: True
+    length_penalty: 50
 
     lam1: 1
     lam2: 1
