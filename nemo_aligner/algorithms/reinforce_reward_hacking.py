@@ -373,7 +373,7 @@ class ReinforceHacker:
             prompt_lengths = balanced_local_batch["prompt_lengths"]
             response_lengths = balanced_local_batch["response_lengths"]
             length_mask = ((response_lengths - prompt_lengths) <= 1300).float()
-            rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - length_mask)
+            #rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - length_mask)
             
 
 
