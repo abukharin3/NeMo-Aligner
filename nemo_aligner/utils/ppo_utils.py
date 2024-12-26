@@ -111,7 +111,10 @@ def calculate_rloo_baseline(prompts, reward, mask):
             baseline[prompt_idx] = reward[prompt_idx]
             baseline_std[prompt_idx] = 1
         else:
-            rloo = torch.matmul(rloo_mat, reward[prompt_idx] * mask[prompt_idx]) / (mask[prompt_idx].sum() - 1)
+            # rloo = torch.matmul(rloo_mat, reward[prompt_idx] * mask[prompt_idx]) / (mask[prompt_idx].sum() - 1)
+            # baseline[prompt_idx] = rloo
+            # baseline_std[prompt_idx] = reward[prompt_idx].std() + 1e-1
+            rloo = torch.matmul(rloo_mat, reward[prompt_idx]) / (len(prompt_idx) - 1)
             baseline[prompt_idx] = rloo
             baseline_std[prompt_idx] = reward[prompt_idx].std() + 1e-1
             
