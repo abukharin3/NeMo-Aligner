@@ -373,15 +373,18 @@ class ReinforceHacker:
             prompt_lengths = balanced_local_batch["prompt_lengths"]
             response_lengths = balanced_local_batch["response_lengths"]
             length_mask = ((response_lengths - prompt_lengths) <= 1300).float()
-            rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - balanced_local_batch["is_end"].float())
+            rewards_with_kl = rewards_with_kl * length_mask - 50 * (1 - length_mask)
             
 
 
-            baseline = calculate_rloo_baseline(
+            baseline, baseline_std = calculate_rloo_baseline(
                 prompts=balanced_local_batch["prompt_tokens"],
                 reward=rewards_with_kl,
                 mask=balanced_local_batch["is_end"].float()
             )
+
+            baseline = baseline / baseline_std
+            rewards_with_kl = rewards_with_kl / baseline_std
 
             balanced_local_batch["rewards_with_kl"] = rewards_with_kl
             balanced_local_batch["baseline"] = baseline

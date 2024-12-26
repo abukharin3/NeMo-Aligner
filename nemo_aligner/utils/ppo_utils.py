@@ -98,6 +98,7 @@ def calculate_rloo_baseline(prompts, reward, mask):
     # regularized_reward = batch["rewards"] - self.cfg.initial_policy_kl_penalty * batch["init_policy_kl"]
 
     baseline = torch.zeros_like(reward)
+    baseline_std = torch.zeros_like(reward)
     reward_device = reward.get_device()
     for i in range(len(unique_prompts)):
         is_matching_prompt = (prompts == unique_prompts[i]).all(1)
@@ -108,8 +109,10 @@ def calculate_rloo_baseline(prompts, reward, mask):
 
         if mask[prompt_idx].sum() <= 1:
             baseline[prompt_idx] = reward[prompt_idx]
+            baseline_std[prompt_idx] = 1
         else:
             rloo = torch.matmul(rloo_mat, reward[prompt_idx] * mask[prompt_idx]) / (mask[prompt_idx].sum() - 1)
             baseline[prompt_idx] = rloo
+            baseline_std[prompt_idx] = reward[prompt_idx].std() + 1e-6
             
-    return baseline
+    return baseline, baseline_std
