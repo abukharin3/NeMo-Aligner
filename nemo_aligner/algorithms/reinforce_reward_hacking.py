@@ -377,14 +377,14 @@ class ReinforceHacker:
             
 
 
-            baseline, baseline_std = calculate_rloo_baseline(
+            baseline, _ = calculate_rloo_baseline(
                 prompts=balanced_local_batch["prompt_tokens"],
                 reward=rewards_with_kl,
                 mask=balanced_local_batch["is_end"].float()
             )
 
-            baseline = baseline / baseline_std
-            rewards_with_kl = rewards_with_kl / baseline_std
+            # baseline = baseline / baseline_std
+            # rewards_with_kl = rewards_with_kl / baseline_std
 
             balanced_local_batch["rewards_with_kl"] = rewards_with_kl
             balanced_local_batch["baseline"] = baseline
