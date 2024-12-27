@@ -136,6 +136,30 @@ remote_critic_rm_max:
     ip: localhost
     port: 5558
 
+remote_critic_rm_gt:
+  # what to batch the inputs to
+  # set to None if no batching when sending inference to the critic
+  pad_to_length: ${model.encoder_seq_length}
+
+  # must match the same flag in the critic config
+  combine_rm_and_critic_server: True
+
+  # reward model server, specify if
+  # combine_rm_and_critic server is False
+  reward_model:
+    name: reward_model
+    ip: localhost
+    port: 5559
+    template: HelpSteer
+
+  critic:
+    name:
+      train: critic_train
+      infer: critic_infer
+      save: critic_save
+    ip: localhost
+    port: 5560
+
 
 exp_manager:
   explicit_log_dir: /results
