@@ -5,6 +5,13 @@
 .DS_Store
 .hydra
 .bash_history.local
+analyze/*
+data/*
+.vscode/*
+code_eval
+instruction_following_eval/*
+exp/*
+scripts/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
