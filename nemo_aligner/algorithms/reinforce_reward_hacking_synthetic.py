@@ -409,7 +409,7 @@ class ReinforceHackerSynthetic:
         rewards = rollout_batch["rewards"]
         rewards_max = rollout_batch["rewards_to_max"]
         rewards_min = rollout_batch["rewards_to_min"]
-        rewards_gt = rollout_batch["rewards_to_gt"]
+        rewards_gt = rollout_batch["rewards_gt"]
         rewards = rollout_batch["rewards"]
         is_end = rollout_batch["is_end"]
         
