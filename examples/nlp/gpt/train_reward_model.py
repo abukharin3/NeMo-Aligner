@@ -161,8 +161,10 @@ def main(cfg) -> None:
         run_timer=timer,
     )
 
-    if custom_trainer_state_dict is not None:
-        rm_trainer.load_state_dict(custom_trainer_state_dict)
+    print(rm_trainer)
+
+    # if custom_trainer_state_dict is not None:
+    #     rm_trainer.load_state_dict(custom_trainer_state_dict)
 
     rm_trainer.fit()
 
