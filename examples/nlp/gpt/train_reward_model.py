@@ -146,6 +146,8 @@ def main(cfg) -> None:
 
     timer = Timer(cfg.exp_manager.get("max_time_per_run") if cfg.exp_manager else None)
 
+    print("init supervised training")
+
     rm_trainer = SupervisedTrainer(
         cfg=cfg.trainer.rm,
         model=ptl_model,
