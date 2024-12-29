@@ -73,6 +73,8 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
         self.forward_micro_batch_size = self.cfg.get("forward_micro_batch_size", self.cfg.micro_batch_size)
 
+        print("INITIALIZING RM")
+
     def model_provider_func(self, pre_process, post_process):
         """Model depends on pipeline paralellism."""
 
@@ -183,6 +185,9 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                 return out_chosen.flatten(), out_rejected.flatten()
 
             def loss_func(output_tensor):
+                print("chosen_score", batch["chosen_score"])
+                print("rejected_score", batch["rejected_score"])
+
                 # Loss per micro batch (ub).
                 loss_for_ub, acc_chosen = self.loss_func(output_tensor)
                 if validation_step and not self.cfg.data.get("validation_drop_last", True):
