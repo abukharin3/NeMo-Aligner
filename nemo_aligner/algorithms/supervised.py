@@ -50,6 +50,7 @@ class SupervisedTrainer:
         run_timer,
         run_init_validation=False,
     ):
+        print("INIT SUPERVISED")
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
