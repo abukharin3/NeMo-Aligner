@@ -99,6 +99,7 @@ def main(cfg) -> None:
     train_valid_test_num_samples = [-1 * cfg.model.global_batch_size] * 3
 
     if reward_model_type == RewardModelType.BINARY_RANKING:
+        print("building binary dataset")
         dataset_builder = build_train_valid_test_rm_datasets
     elif reward_model_type == RewardModelType.REGRESSION:
         dataset_builder = build_train_valid_test_regression_rm_datasets

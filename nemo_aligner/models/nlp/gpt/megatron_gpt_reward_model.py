@@ -92,6 +92,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                 "normal output layer. Overriding it to False"
             )
 
+        print("INITIALIZING MODEL")
         model = GPTRewardModel(
             config=self.transformer_config,
             transformer_layer_spec=get_specs(self.spec_name, self.transformer_config),
@@ -115,6 +116,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         return model
 
     def get_forward_output_and_loss_func(self, validation_step=False):
+        print("GFW")
         def fwd_output_and_loss_func(dataloader_iter, model):
             batch = next(dataloader_iter)
 
@@ -242,6 +244,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         return out_chosen, out_rejected
 
     def loss_func(self, output_tensor):
+        print("GFW2")
         out_chosen, out_rejected = self.split_output_tensor(output_tensor)
         comp = out_chosen > out_rejected
         acc_chosen = torch.sum(comp) / comp.shape[0]
@@ -306,6 +309,8 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         torch.distributed.broadcast(rewards_rejected_mean, get_last_rank())
         torch.distributed.broadcast(rewards_all_mean, get_last_rank())
         torch.distributed.broadcast(rewards_all_std, get_last_rank())
+
+        print("here")
 
         metrics = {
             "loss": loss_mean,
