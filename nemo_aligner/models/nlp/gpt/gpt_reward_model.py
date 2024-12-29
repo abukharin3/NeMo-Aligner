@@ -54,8 +54,6 @@ class RewardModelHead(RowParallelLinear):
         config = deepcopy(config)
         config.params_dtype = dtype
 
-        print("INIT RM HEAD")
-
         assert output_size > 0, "Output size of reward model head should be greater than zero"
 
         super().__init__(

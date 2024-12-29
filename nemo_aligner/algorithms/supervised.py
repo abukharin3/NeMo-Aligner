@@ -50,7 +50,7 @@ class SupervisedTrainer:
         run_timer,
         run_init_validation=False,
     ):
-        logging.info("INIT SUPERVISED")
+        print("INIT SUPERVISED")
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
@@ -143,8 +143,8 @@ class SupervisedTrainer:
         self.model.prepare_for_training_step()
 
         # NOTE: assume backward is called on the loss already
-        logging.info("BATCH", batch)
-        logging.info("MODEL", self.model)
+        print("BATCH", batch)
+        print("MODEL", self.model)
         loss_mean, metrics = self.model.get_loss_and_metrics(batch=batch, forward_only=False)
 
         self.model.finish_training_step()
@@ -179,9 +179,6 @@ class SupervisedTrainer:
                 "max_epochs > 1 is not supported unless using `MegatronPretrainingRandomBatchSampler` as the batch_sampler for your train dataloader"
             )
 
-        raise ValueError(
-                "max_epochs > 1 is not supported unless using `MegatronPretrainingRandomBatchSampler` as the batch_sampler for your train dataloader"
-            )
         epoch_iter = range(self.epoch, self.cfg.max_epochs)
         if len(epoch_iter) <= 0:
             # epoch done
