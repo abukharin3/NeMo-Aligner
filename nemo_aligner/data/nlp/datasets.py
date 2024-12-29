@@ -251,10 +251,12 @@ class RewardModelDataset(Dataset):
             chosen = self.data[multiple * idx]
             rejected = self.data[multiple * idx + 1]
             if self.cfg.data.data_impl.startswith("json"):
-                chosen, _ = self.encode(chosen["text"])
-                rejected, _ = self.encode(rejected["text"])
                 chosen_score = chosen["score"]
                 rejected_score = rejected["score"]
+                
+                chosen, _ = self.encode(chosen["text"])
+                rejected, _ = self.encode(rejected["text"])
+                
             if len(chosen) > self.seq_length or len(rejected) > self.seq_length:
                 idx += multiple
                 continue
