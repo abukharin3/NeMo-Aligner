@@ -248,7 +248,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         out_chosen, out_rejected = self.split_output_tensor(output_tensor)
         comp = out_chosen > out_rejected
         acc_chosen = torch.sum(comp) / comp.shape[0]
-        loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean()
+        loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected * torch.rand_like(out_rejected)).mean()
         return loss, acc_chosen
 
     def get_loss_and_metrics(self, batch, forward_only):
