@@ -271,7 +271,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         acc_chosen = torch.sum(comp) / comp.shape[0]
         print('loss', regression_loss, -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean())
         ranking_loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean()
-        loss = ranking_loss + self.cfg.lam * regression_loss
+        loss = self.cfg.lam1 * ranking_loss + self.cfg.lam2 * regression_loss
         return loss, acc_chosen, regression_loss, ranking_loss
 
     def get_loss_and_metrics(self, batch, forward_only):
