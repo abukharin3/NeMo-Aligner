@@ -84,6 +84,9 @@ model:
   encoder_seq_length: 4096
   max_position_embeddings: ${model.encoder_seq_length}
 
+  #
+  lam: 0.5
+
   # miscellaneous
   seed: 1234
 

@@ -183,11 +183,9 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                 return out_chosen.flatten(), out_rejected.flatten()
 
             def loss_func(output_tensor):
-                print("chosen_score", batch["chosen_score"])
-                print("rejected_score", batch["rejected_score"])
 
                 # Loss per micro batch (ub).
-                loss_for_ub, acc_chosen = self.loss_func(output_tensor, batch["chosen_score"], batch["rejected_score"])
+                loss_for_ub, acc_chosen = self.loss_func(output_tensor, batch["chosen_score"].unsqueeze(-1), batch["rejected_score"].unsqueeze(-1))
                 if validation_step and not self.cfg.data.get("validation_drop_last", True):
                     num_valid_tokens_in_ub = batch["loss_mask"].sum()
                     if loss_for_ub.isnan():
@@ -206,8 +204,6 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                         loss_sum_and_ub_size_all_gpu, group=parallel_state.get_data_parallel_group()
                     )
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
-
-                    print("out, chosen shapes", out_chosen.shape, batch["chosen_score"].shape)
 
                     return (
                         loss_for_ub,
@@ -246,9 +242,14 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         out_chosen, out_rejected = self.split_output_tensor(output_tensor)
         print("shape", out_chosen.shape, out_rejected.shape, chosen_score.shape, rejected_score.shape)
         print("val", out_chosen, out_rejected, chosen_score, rejected_score)
+
+        regression_loss = 0.5 * torch.nn.functional.mse_loss(out_chosen, chosen_score).mean() + 0.5 * torch.nn.functional.mse_loss(out_rejected, rejected_score).mean()
+
+
         comp = out_chosen > out_rejected
         acc_chosen = torch.sum(comp) / comp.shape[0]
-        loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean()
+        print('loss', regression_loss, -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean())
+        loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean() + self.cfg.lam * regression_loss
         return loss, acc_chosen
 
     def get_loss_and_metrics(self, batch, forward_only):
