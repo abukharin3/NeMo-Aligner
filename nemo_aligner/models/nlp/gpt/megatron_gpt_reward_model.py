@@ -185,7 +185,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
             def loss_func(output_tensor):
 
                 # Loss per micro batch (ub).
-                loss_for_ub, acc_chosen = self.loss_func(output_tensor, batch["chosen_score"].unsqueeze(-1), batch["rejected_score"].unsqueeze(-1))
+                loss_for_ub, acc_chosen = self.loss_func(output_tensor, batch["chosen_score"].unsqueeze(-1).float(), batch["rejected_score"].unsqueeze(-1).float())
                 if validation_step and not self.cfg.data.get("validation_drop_last", True):
                     num_valid_tokens_in_ub = batch["loss_mask"].sum()
                     if loss_for_ub.isnan():
