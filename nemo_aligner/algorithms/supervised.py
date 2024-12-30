@@ -50,7 +50,6 @@ class SupervisedTrainer:
         run_timer,
         run_init_validation=False,
     ):
-        print("INIT SUPERVISED")
         self.model = model
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
@@ -143,8 +142,6 @@ class SupervisedTrainer:
         self.model.prepare_for_training_step()
 
         # NOTE: assume backward is called on the loss already
-        print("BATCH", batch)
-        print("MODEL", self.model)
         loss_mean, metrics = self.model.get_loss_and_metrics(batch=batch, forward_only=False)
 
         self.model.finish_training_step()
