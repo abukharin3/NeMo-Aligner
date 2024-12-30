@@ -238,14 +238,14 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
         return fwd_output_and_loss_func
 
-    def split_output_tensor(self, output_tensor, chosen_score, rejected_score):
+    def split_output_tensor(self, output_tensor):
         out_chosen, out_rejected = torch.split(output_tensor.float(), output_tensor.shape[0] // 2, dim=0)
-        print("shape", out_chosen.shape, out_rejected.shape, chosen_score.shape, rejected_score.shape)
-        print("val", out_chosen, out_rejected, chosen_score, rejected_score)
         return out_chosen, out_rejected
 
-    def loss_func(self, output_tensor):
+    def loss_func(self, output_tensor, chosen_score, rejected_score):
         out_chosen, out_rejected = self.split_output_tensor(output_tensor)
+        print("shape", out_chosen.shape, out_rejected.shape, chosen_score.shape, rejected_score.shape)
+        print("val", out_chosen, out_rejected, chosen_score, rejected_score)
         comp = out_chosen > out_rejected
         acc_chosen = torch.sum(comp) / comp.shape[0]
         loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean()
