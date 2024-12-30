@@ -205,12 +205,16 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                     )
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
 
+                    regression_loss = 0.5 * torch.nn.functional.mse_loss(out_chosen, batch["chosen_score"].unsqueeze(-1).float()).mean() + 0.5 * torch.nn.functional.mse_loss(out_rejected, batch["rejected_score"].unsqueeze(-1).float()).mean()
+
+
                     return (
                         loss_for_ub,
                         {
                             "loss_sum_and_ub_size": loss_sum_and_ub_size_all_gpu,
                             "out_chosen": out_chosen,
                             "out_rejected": out_rejected,
+                            "regression_loss": regression_loss
                         },
                     )
                 else:
@@ -218,6 +222,9 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                     reduced_acc = average_losses_across_data_parallel_group([acc_chosen])
 
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
+
+                    regression_loss = 0.5 * torch.nn.functional.mse_loss(out_chosen, batch["chosen_score"].unsqueeze(-1).float()).mean() + 0.5 * torch.nn.functional.mse_loss(out_rejected, batch["rejected_score"].unsqueeze(-1).float()).mean()
+
                     
 
                     return (
@@ -227,6 +234,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                             "acc": reduced_acc,
                             "out_chosen": out_chosen,
                             "out_rejected": out_rejected,
+                            "regression_loss": regression_loss
                         },
                     )
 
@@ -285,6 +293,11 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
             loss_tensors_list = [loss_reduced["avg"] for loss_reduced in losses_reduced_per_micro_batch]
             loss_tensor = torch.concat(loss_tensors_list)
             loss_mean = loss_tensor.mean()
+
+            regr_loss_tensors_list = [loss_reduced["regression_loss"] for loss_reduced in losses_reduced_per_micro_batch]
+            regr_loss_tensor = torch.concat(regr_loss_tensors_list)
+            regr_loss_mean = regr_loss_tensor.mean()
+
             acc_tensors_list = [loss_reduced["acc"] for loss_reduced in losses_reduced_per_micro_batch]
 
             if len(acc_tensors_list) == 1:
@@ -295,6 +308,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         else:
 
             loss_mean = torch.tensor(0.0, device=torch.cuda.current_device())
+            regr_loss_mean = torch.tensor(0.0, device=torch.cuda.current_device())
             acc_mean = torch.tensor(0.0, device=torch.cuda.current_device())
 
             rewards_chosen_mean = torch.tensor(0.0, device=torch.cuda.current_device())
@@ -304,6 +318,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
         # we can only log on one rank if it is rank zero so we broadcast from last rank
         torch.distributed.broadcast(loss_mean, get_last_rank())
+        torch.distributed.broadcast(regr_loss_mean, get_last_rank())
         torch.distributed.broadcast(acc_mean, get_last_rank())
 
         torch.distributed.broadcast(rewards_chosen_mean, get_last_rank())
@@ -313,6 +328,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
         metrics = {
             "loss": loss_mean,
+            "regressopn_loss": regr_loss_mean,
             "acc": acc_mean,
             "rewards_chosen_mean": rewards_chosen_mean,
             "rewards_rejected_mean": rewards_rejected_mean,
