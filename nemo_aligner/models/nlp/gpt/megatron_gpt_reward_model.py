@@ -187,7 +187,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                 print("rejected_score", batch["rejected_score"])
 
                 # Loss per micro batch (ub).
-                loss_for_ub, acc_chosen = self.loss_func(output_tensor)
+                loss_for_ub, acc_chosen = self.loss_func(output_tensor, batch["chosen_score"], batch["rejected_score"])
                 if validation_step and not self.cfg.data.get("validation_drop_last", True):
                     num_valid_tokens_in_ub = batch["loss_mask"].sum()
                     if loss_for_ub.isnan():
@@ -222,6 +222,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                     reduced_acc = average_losses_across_data_parallel_group([acc_chosen])
 
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
+                    
 
                     return (
                         loss_for_ub,
@@ -237,8 +238,10 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
         return fwd_output_and_loss_func
 
-    def split_output_tensor(self, output_tensor):
+    def split_output_tensor(self, output_tensor, chosen_score, rejected_score):
         out_chosen, out_rejected = torch.split(output_tensor.float(), output_tensor.shape[0] // 2, dim=0)
+        print("shape", out_chosen.shape, out_rejected.shape, chosen_score.shape, rejected_score.shape)
+        print("val", out_chosen, out_rejected, chosen_score, rejected_score)
         return out_chosen, out_rejected
 
     def loss_func(self, output_tensor):
