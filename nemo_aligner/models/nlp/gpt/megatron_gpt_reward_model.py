@@ -207,6 +207,8 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                     )
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
 
+                    print("out, chosen shapes", out_chosen.shape, batch["chosen_score"].shape)
+
                     return (
                         loss_for_ub,
                         {
