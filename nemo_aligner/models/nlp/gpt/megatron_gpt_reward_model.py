@@ -185,7 +185,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
             def loss_func(output_tensor):
 
                 # Loss per micro batch (ub).
-                loss_for_ub, acc_chosen = self.loss_func(output_tensor, batch["chosen_score"].unsqueeze(-1).float(), batch["rejected_score"].unsqueeze(-1).float())
+                loss_for_ub, acc_chosen, regression_loss = self.loss_func(output_tensor, batch["chosen_score"].unsqueeze(-1).float(), batch["rejected_score"].unsqueeze(-1).float())
                 if validation_step and not self.cfg.data.get("validation_drop_last", True):
                     num_valid_tokens_in_ub = batch["loss_mask"].sum()
                     if loss_for_ub.isnan():
@@ -200,13 +200,17 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
                             torch.tensor([num_valid_tokens_in_ub]).cuda().clone().detach(),
                         ]
                     )
+
+                    regression_loss = torch.cat(
+                        [
+                            regression_loss.clone().detach().view(1),
+                            torch.tensor([num_valid_tokens_in_ub]).cuda().clone().detach(),
+                        ]
+                    )
                     torch.distributed.all_reduce(
                         loss_sum_and_ub_size_all_gpu, group=parallel_state.get_data_parallel_group()
                     )
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
-
-                    regression_loss = 0.5 * torch.nn.functional.mse_loss(out_chosen, batch["chosen_score"].unsqueeze(-1).float()).mean() + 0.5 * torch.nn.functional.mse_loss(out_rejected, batch["rejected_score"].unsqueeze(-1).float()).mean()
-
 
                     return (
                         loss_for_ub,
@@ -223,7 +227,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
                     out_chosen, out_rejected = gather_and_split_rewards(output_tensor)
 
-                    regression_loss = 0.5 * torch.nn.functional.mse_loss(out_chosen, batch["chosen_score"].unsqueeze(-1).float()).mean() + 0.5 * torch.nn.functional.mse_loss(out_rejected, batch["rejected_score"].unsqueeze(-1).float()).mean()
+                    regression_loss = average_losses_across_data_parallel_group([regression_loss])
 
                     
 
@@ -258,7 +262,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
         acc_chosen = torch.sum(comp) / comp.shape[0]
         print('loss', regression_loss, -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean())
         loss = -torch.nn.functional.logsigmoid(out_chosen - out_rejected).mean() + self.cfg.lam * regression_loss
-        return loss, acc_chosen
+        return loss, acc_chosen, regression_loss
 
     def get_loss_and_metrics(self, batch, forward_only):
         data_iter = get_iterator_k_split(batch, get_num_microbatches())
@@ -328,7 +332,7 @@ class MegatronGPTRewardModel(MegatronGPTModel, SupervisedInterface, Inferrable):
 
         metrics = {
             "loss": loss_mean,
-            "regressopn_loss": regr_loss_mean,
+            "regression_loss": regr_loss_mean,
             "acc": acc_mean,
             "rewards_chosen_mean": rewards_chosen_mean,
             "rewards_rejected_mean": rewards_rejected_mean,
