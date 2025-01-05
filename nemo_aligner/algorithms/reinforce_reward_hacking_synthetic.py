@@ -379,7 +379,7 @@ class ReinforceHackerSynthetic:
             # Long sequence mask
             prompt_lengths = balanced_local_batch["prompt_lengths"]
             response_lengths = balanced_local_batch["response_lengths"]
-            length_mask = ((response_lengths - prompt_lengths) <= 1300).float()
+            length_mask = ((response_lengths - prompt_lengths) <= 2048).float()
             rewards_with_kl = rewards_with_kl * length_mask -  self.cfg.length_penalty * (1 - length_mask)
             
 
