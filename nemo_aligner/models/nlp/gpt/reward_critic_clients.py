@@ -24,6 +24,9 @@ from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.distributed import broadcast_2d_tensor_within_mp, gather_tensor, run_if_model_parallel_src
 from nemo_aligner.utils.server_utils import FutureResult
 
+import re
+from code_eval.test_single import unsafe_execute
+
 """A remote client that acts like a real Reward Model and Critic forwards all requests from the actor
     over to the remote PyTrition server
 """
@@ -217,3 +220,78 @@ class RemoteGPTRMClient:
         )
 
         return RMFutureResult(rm_future)
+
+
+
+@dataclass
+class CodeTestingClient:
+    cfg: DictConfig
+
+    def __post_init__(self):
+        cfg = self.cfg
+
+        self.pad_to_length = self.cfg.pad_to_length
+
+    def infer_rm(self, rollout_batch):
+        response_tokens = rollout_batch["response_tokens"].cpu()
+
+        # Test evalplus functioning
+
+        code = '''
+def fib4(n: int) -> int:
+    if n == 0: return 0
+    elif n == 1: return 0
+    elif n == 2: return 2
+    elif n == 3: return 0
+
+    a, b, c, d = 0, 0, 2, 0
+    for _ in range(4, n + 1):
+        a, b, c, d = b, c, d, a + b + c + d
+
+    return d
+    '''
+
+        _SUCCESS = 1
+        _FAILED = 0
+        
+        inputs = [(0,), (1,), (5,)]
+        progress = 0#Value("i", 0)
+        stat = 0#Value("i", _UNKNOWN)
+        details = [False for _ in range(len(inputs))]
+
+        
+        _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
+        print(y, "should be [True, True, True]")
+
+        code = '''
+def fib4(n: int) -> int:
+    if n == 0: return 0
+    elif n == 1: return 0
+    elif n == 2: return 2
+    elif n == 3: return 0
+
+    a, b, c, d = 0, 0, 2, 0
+    for _ in range(4, n + 1):
+        a, b, c, d = b, c, d, a + b + c + d
+
+    return d + 1
+    '''
+
+        _SUCCESS = 1
+        _FAILED = 0
+        
+        inputs = [(0,), (1,), (5,)]
+        progress = 0#Value("i", 0)
+        stat = 0#Value("i", _UNKNOWN)
+        details = [False for _ in range(len(inputs))]
+
+        
+        _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
+        print(y, "should be [True, True, False]")
+
+
+
+        return rollout_batch["response_lengths"]
+        
+
+        
