@@ -235,6 +235,8 @@ class CodeTestingClient:
     def infer_rm(self, rollout_batch):
         response_tokens = rollout_batch["response_tokens"].cpu()
 
+        print("INFER RM")
+
         # Test evalplus functioning
 
         code = '''
