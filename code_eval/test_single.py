@@ -10,7 +10,7 @@ import signal
 import numpy as np
 import resource
 
-from utils import (
+from code_eval.utils import (
     # create_tempdir,
     reliability_guard,
     swallow_io,
