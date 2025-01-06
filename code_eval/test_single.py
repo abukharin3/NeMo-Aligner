@@ -10,7 +10,7 @@ import signal
 import numpy as np
 import resource
 
-from evalplus.eval.utils import (
+from utils import (
     # create_tempdir,
     reliability_guard,
     swallow_io,
