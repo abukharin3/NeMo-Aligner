@@ -109,7 +109,7 @@ def unsafe_execute(
                 if debug:
                     print(f"Function {entry_point} not found.")
                 stat = 0
-                return stat, details
+                return details
 
         for i, inp in enumerate(inputs):
             try:
