@@ -258,7 +258,10 @@ class CodeTestingClient:
             for end_string in self.cfg.end_strings:
                 response = response.replace(end_string, "")
             rewards.append(self.code_reward(response, args[i]))
+
+        rewards = torch.tensor(rewards, device=rollout_batch["logprobs"].device)
         print("rewards", rewards)
+        return rewards
 #         print("INFER RM")
 
 #         # Test evalplus functioning
@@ -312,12 +315,12 @@ class CodeTestingClient:
 #         details = [False for _ in range(len(inputs))]
 
         
-#         _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
-#         print(y, "should be [True, True, False]")
+# #         _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
+# #         print(y, "should be [True, True, False]")
 
 
 
-        return rollout_batch["response_lengths"]
+#         return rollout_batch["response_lengths"]
         
 
         

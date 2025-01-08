@@ -313,7 +313,7 @@ class ReinforceTrainer:
             with self.timer("critic_wait"):
                 rm_rollout_batches = []
                 for future in futures:
-                    rewards = future.squeeze(1)
+                    rewards = future
                     rm_rollout_batches.append({"rewards": rewards})
 
             unbalanced_rm_batch = ReinforceRolloutBatch.from_rollout_batches(
