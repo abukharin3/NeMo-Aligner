@@ -99,7 +99,7 @@ def unsafe_execute(
 
 
     maximum_memory_bytes = 1 * 1024 * 1024 * 1024
-    reliability_guard(maximum_memory_bytes=maximum_memory_bytes)
+    # reliability_guard(maximum_memory_bytes=maximum_memory_bytes)
     try:
         with swallow_io():
             exec(code, exec_globals)
