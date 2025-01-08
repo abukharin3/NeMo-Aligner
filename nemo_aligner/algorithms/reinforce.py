@@ -224,7 +224,9 @@ class ReinforceTrainer:
         # collect everything we need to train REINFORCE
         reinforce_rollout_data["mask"] = mask
         reinforce_rollout_data["rewards_with_kl"] = rewards_with_kl
+        print(rewards_with_kl, "RKL")
         reinforce_rollout_data["baseline"] = baseline
+        print(baseline, "baseline")
         reinforce_rollout_data["response_tokens"] = response_tokens
         reinforce_rollout_data["is_end"] = is_end
 
@@ -334,6 +336,7 @@ class ReinforceTrainer:
         balanced_local_batch.update(balanced_rm_batch)
 
         global_rollout_batch.update(global_rm_batch)
+        print("reward", balanced_local_batch["rewards"])
 
         return balanced_local_batch, cpu_dict(self.compute_rollout_metrics(global_rollout_batch))
 
