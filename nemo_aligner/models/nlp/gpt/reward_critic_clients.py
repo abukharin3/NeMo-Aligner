@@ -259,7 +259,7 @@ class CodeTestingClient:
                 response = response.replace(end_string, "")
             rewards.append(self.code_reward(response, args[i]))
 
-        rewards = torch.tensor(rewards, device=rollout_batch["response_tokens"].device)
+        rewards = torch.tensor(rewards, device=rollout_batch["response_tokens"].device).float()
         print("rewards", rewards)
         return rewards
 #         print("INFER RM")
