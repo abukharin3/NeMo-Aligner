@@ -246,7 +246,7 @@ class CodeTestingClient:
         print("code", code)
         scores = unsafe_execute(entry_point=args["entry_point"], code=code, inputs=args["base_input"], expected=args["expected"], time_limits=[60] * len(args["expected"]), atol=args["atol"], stat=0, details=[False for _ in range(len(args["expected"]))], progress=0)
         print("scores", scores)
-        return np.array(scores).int().mean()
+        return np.array(scores).mean()
 
     def infer_rm(self, rollout_batch, args, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
