@@ -81,6 +81,8 @@ remote_rm:
     name: reward_model
     ip: localhost
     port: 5555
+  
+  end_strings: ["<|endoftext|>", "<extra_id_1>", "<|eot_id|>", "<|eom_id|>"]
 
 
 exp_manager:
