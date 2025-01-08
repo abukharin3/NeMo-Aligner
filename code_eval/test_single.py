@@ -155,7 +155,7 @@ def unsafe_execute(
 
         # Any additional cleanup can go here
 
-    return stat, details
+    return details
 
 
 
