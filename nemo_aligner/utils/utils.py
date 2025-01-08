@@ -320,6 +320,7 @@ def collate_with_batch_max_sequence_length(
     """collate function that batches by max sequence length
     """
     texts = [item["text"] for item in data_batch]
+    args = [item["args"] for item in data_batch]
     loss_multipliers = torch.as_tensor([item["loss_multiplier"] for item in data_batch]).view(len(data_batch), 1)
     lengths = torch.as_tensor([item["length"] for item in data_batch])
     batch_max_length = lengths.max()
@@ -329,6 +330,7 @@ def collate_with_batch_max_sequence_length(
     output = {
         "text": texts,
         "length": lengths,
+        "args": args
     }
 
     other = {}

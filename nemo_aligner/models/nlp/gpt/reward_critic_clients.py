@@ -221,6 +221,15 @@ class RemoteGPTRMClient:
 
         return RMFutureResult(rm_future)
 
+def extract_code(response):
+    code = response
+    try:
+        code = response.split("```python\n")[1].split("```")[0].split("assert")[0].split("# Test")[0].split("# Unit")[0].strip()
+    except:
+        code = response.replace("# Your codes here\n", "").split("```")[0].strip()
+    
+    return code
+
 
 
 @dataclass
@@ -232,64 +241,79 @@ class CodeTestingClient:
 
         self.pad_to_length = self.cfg.pad_to_length
 
-    def infer_rm(self, rollout_batch):
+    def code_reward(self, response, args):
+        code = extract_code(response)
+        print("code", code)
+        scores = unsafe_execute(entry_point=args["entry_point"], code=code, inputs=args["base_inputs"], expected=args["expected"], time_limits=[60] * len(args["expected"]), atol=args["atol"], stat=0, details=[False for _ in range(len(args["expected"]))], progress=0)
+        print("scores", scores)
+        return np.array(scores).int().mean()
+
+    def infer_rm(self, rollout_batch, args, model):
         response_tokens = rollout_batch["response_tokens"].cpu()
 
-        print("INFER RM")
+        rewards = []
+        for i in range(rollout_batch["response_tokens"].size(0)):
+            prompt = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["prompt_lengths"][i]].tolist())
+            response = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, rollout_batch["prompt_lengths"][i]:rollout_batch["response_lengths"][i]].tolist())
+            for end_string in self.cfg.end_strings:
+                response = response.replace(end_string, "")
+            rewards.append(code_reward(response, args))
+        print("rewards", rewards)
+#         print("INFER RM")
 
-        # Test evalplus functioning
+#         # Test evalplus functioning
 
-        code = '''
-def fib4(n: int) -> int:
-    if n == 0: return 0
-    elif n == 1: return 0
-    elif n == 2: return 2
-    elif n == 3: return 0
+#         code = '''
+# def fib4(n: int) -> int:
+#     if n == 0: return 0
+#     elif n == 1: return 0
+#     elif n == 2: return 2
+#     elif n == 3: return 0
 
-    a, b, c, d = 0, 0, 2, 0
-    for _ in range(4, n + 1):
-        a, b, c, d = b, c, d, a + b + c + d
+#     a, b, c, d = 0, 0, 2, 0
+#     for _ in range(4, n + 1):
+#         a, b, c, d = b, c, d, a + b + c + d
 
-    return d
-    '''
+#     return d
+#     '''
 
-        _SUCCESS = 1
-        _FAILED = 0
+#         _SUCCESS = 1
+#         _FAILED = 0
         
-        inputs = [(0,), (1,), (5,)]
-        progress = 0#Value("i", 0)
-        stat = 0#Value("i", _UNKNOWN)
-        details = [False for _ in range(len(inputs))]
-
-        
-        _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
-        print(y, "should be [True, True, True]")
-
-        code = '''
-def fib4(n: int) -> int:
-    if n == 0: return 0
-    elif n == 1: return 0
-    elif n == 2: return 2
-    elif n == 3: return 0
-
-    a, b, c, d = 0, 0, 2, 0
-    for _ in range(4, n + 1):
-        a, b, c, d = b, c, d, a + b + c + d
-
-    return d + 1
-    '''
-
-        _SUCCESS = 1
-        _FAILED = 0
-        
-        inputs = [(0,), (1,), (5,)]
-        progress = 0#Value("i", 0)
-        stat = 0#Value("i", _UNKNOWN)
-        details = [False for _ in range(len(inputs))]
+#         inputs = [(0,), (1,), (5,)]
+#         progress = 0#Value("i", 0)
+#         stat = 0#Value("i", _UNKNOWN)
+#         details = [False for _ in range(len(inputs))]
 
         
-        _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
-        print(y, "should be [True, True, False]")
+#         _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
+#         print(y, "should be [True, True, True]")
+
+#         code = '''
+# def fib4(n: int) -> int:
+#     if n == 0: return 0
+#     elif n == 1: return 0
+#     elif n == 2: return 2
+#     elif n == 3: return 0
+
+#     a, b, c, d = 0, 0, 2, 0
+#     for _ in range(4, n + 1):
+#         a, b, c, d = b, c, d, a + b + c + d
+
+#     return d + 1
+#     '''
+
+#         _SUCCESS = 1
+#         _FAILED = 0
+        
+#         inputs = [(0,), (1,), (5,)]
+#         progress = 0#Value("i", 0)
+#         stat = 0#Value("i", _UNKNOWN)
+#         details = [False for _ in range(len(inputs))]
+
+        
+#         _, y = unsafe_execute(entry_point="fib4", code=code, inputs=inputs, expected=[0, 0, 4], time_limits=[60, 60, 60], atol=1e-6, stat=stat, details=details, progress=progress)
+#         print(y, "should be [True, True, False]")
 
 
 
