@@ -257,7 +257,7 @@ class CodeTestingClient:
             response = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, rollout_batch["prompt_lengths"][i]:rollout_batch["response_lengths"][i]].tolist())
             for end_string in self.cfg.end_strings:
                 response = response.replace(end_string, "")
-            rewards.append(code_reward(response, args))
+            rewards.append(self.code_reward(response, args))
         print("rewards", rewards)
 #         print("INFER RM")
 
