@@ -340,8 +340,8 @@ class MegatronGPTReinforceModel(NLPAdapterModelMixin, MegatronGPTModel, Alignabl
                 # return in GPU, trainer needs to move to cpu
 
                 return rollout_batch
-            except:
-                except Exception as e:
+            
+            except Exception as e:
                 logging.error(f"Query failed: {e}, {i}-th retry")
         
 
