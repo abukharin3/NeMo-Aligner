@@ -599,7 +599,7 @@ class ReinforceInference:
                 # start training
                 clear_memory()
                 self.timer.start("train_time")
-                self.run_training(rollout_dataloader_iter)
+                #self.run_training(rollout_dataloader_iter)
                 timing_metrics["train_time"] = self.timer.stop_and_get_time("train_time")
 
                 self.logger.log_metrics(timing_metrics, step=self.step, prefix="timers/")
