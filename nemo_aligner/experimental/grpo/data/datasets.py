@@ -63,7 +63,10 @@ class AllTaskDataset:
         task_name = self.data[idx]["task_name"]
         extra_verifier_info = None
         if task_name == "math":
-            system_prompt = self.data[idx]["system_prompt"]
+            if "system_prompt" in self.data[idx]:
+                system_prompt = self.data[idx]["system_prompt"]
+            else:
+                system_prompt = ""
             text_str = self.data[idx]["problem"]
             extra_verifier_info = {"ground_truth": self.data[idx]["expected_answer"]}
         else:
