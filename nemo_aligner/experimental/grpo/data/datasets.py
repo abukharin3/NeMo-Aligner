@@ -63,6 +63,7 @@ class AllTaskDataset:
         task_name = self.data[idx]["task_name"]
         extra_verifier_info = None
         if task_name == "math":
+            system_prompt = self.data[idx]["system_prompt"]
             text_str = self.data[idx]["problem"]
             extra_verifier_info = {"ground_truth": self.data[idx]["expected_answer"]}
         else:
@@ -70,13 +71,13 @@ class AllTaskDataset:
 
         if self.apply_chat_template:
             chat = []
-            if self.system_prompt:
-                chat.append({"role": "system", "content": self.system_prompt})
+            chat.append({"role": "system", "content": system_prompt})
             chat.append({"role": "user", "content": self.prompt.format(text_str)})
             text = self.tokenizer.tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
         else:
             text = self.prompt.format(text_str)
 
+        print("text", text)
         sample, _ = self.encode(text)
         sample_tensor = torch.as_tensor(sample, dtype=torch.int64)
         
