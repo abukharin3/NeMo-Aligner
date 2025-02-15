@@ -56,10 +56,11 @@ def worker_process(in_queue, out_queue, load_path, tp):
         Replace the simulation with actual vLLM startup,
         shutdown, and inference logic as needed.
         """
-        def __init__(self):
+        def __init__(self, sampling_params):
             self.running = False
             self.asleep = False
             self.llm = None
+            self.sampling_params = sampling_params
 
         def start(self, path, tp):
             self.llm = LLM(
@@ -138,12 +139,11 @@ def worker_process(in_queue, out_queue, load_path, tp):
               - a list of logprobs (one per token in the generated sequence)
             """
             sampling_params = SamplingParams(
-                temperature=1.0,
-                top_p=1.0,
-                top_k=-1,
-                logprobs=0,
-                max_tokens=args.max_len,
-                #ignore_eos=True,
+                temperature=self.sampling_params['temperature'],
+                top_p=self.sampling_params['top_p'],
+                top_k=self.sampling_params['top_k'],
+                logprobs=self.sampling_params['logprobs'],
+                max_tokens=self.sampling_params['max_tokens'],
             )
 
             # Generate texts from the prompts. The output is a list of RequestOutput objects
@@ -160,7 +160,7 @@ def worker_process(in_queue, out_queue, load_path, tp):
 
             return out_tokens, logprobs
 
-    server = VLLMInferenceServer()
+    server = VLLMInferenceServer(sampling_params)
     server.start(load_path, tp)
 
     while True:
@@ -292,12 +292,24 @@ if __name__ == '__main__':
         required=True, 
         help='Port number to use (must be an integer)'
     )
-    parser.add_argument(
-        '--max_len', 
-        type=int, 
-        default=8192, 
-    )
-    args = parser.parse_args()
-    port = args.port
+    # Add sampling parameters as command-line arguments
+    parser.add_argument('--temperature', type=float, default=1.0, help='Sampling temperature')
+    parser.add_argument('--top_p', type=float, default=1.0, help='Top-p (nucleus) sampling')
+    parser.add_argument('--top_k', type=int, default=-1, help='Top-k sampling')
+    parser.add_argument('--max_tokens', type=int, default=8192, help='Maximum number of tokens to generate')
+    parser.add_argument('--logprobs', type=int, default=0, help='Number of top log probabilities to return')
 
-    app.run(host='0.0.0.0', port=port)
+    args = parser.parse_args()
+
+    # Store the sampling parameters in a dictionary
+    sampling_params = {
+        'temperature': args.temperature,
+        'top_p': args.top_p,
+        'top_k': args.top_k,
+        'max_tokens': args.max_tokens,
+        'logprobs': args.logprobs
+    }
+
+    app.config['sampling_params'] = sampling_params
+
+    app.run(host='0.0.0.0', port=args.port)
