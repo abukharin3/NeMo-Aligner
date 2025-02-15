@@ -142,7 +142,7 @@ def worker_process(in_queue, out_queue, load_path, tp):
                 top_p=1.0,
                 top_k=-1,
                 logprobs=0,
-                max_tokens=2048,
+                max_tokens=args.max_len,
                 #ignore_eos=True,
             )
 
@@ -291,6 +291,11 @@ if __name__ == '__main__':
         type=int, 
         required=True, 
         help='Port number to use (must be an integer)'
+    )
+    parser.add_argument(
+        '--max_len', 
+        type=int, 
+        default=8192, 
     )
     args = parser.parse_args()
     port = args.port

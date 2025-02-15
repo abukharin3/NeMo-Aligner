@@ -80,8 +80,7 @@ class AllTaskDataset:
         else:
             text = text_str
 
-        print("system_prompt", system_prompt)
-        print("text", text)
+        
         sample, _ = self.encode(text)
         sample_tensor = torch.as_tensor(sample, dtype=torch.int64)
         

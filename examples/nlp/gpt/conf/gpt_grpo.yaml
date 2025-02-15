@@ -60,7 +60,7 @@ trainer:
       seed: ${model.seed}
 
       # By default, assume the max input length is the difference between the model sequence length and the max number of tokens to generate
-      max_input_len: ${subtract:${model.encoder_seq_length}, ${model.grpo.length_params.max_length}}
+      max_input_len: 2048
       reshard: False # if True then reshard the model into TP only for inference
       
       # Backend-specific configurations
@@ -160,7 +160,7 @@ model:
     # length argument for autoregressive sampling
     # max length means max amount of tokens to generate
     length_params:
-      max_length: ${int_div:${model.encoder_seq_length}, 2}
+      max_length: ${subtract:${model.encoder_seq_length}, ${trainer.grpo.inference_backend.max_input_len}}
       min_length: 1
 
     # pull from trainer, do not change here. Change at trainer.grpo.generation_rollout_mbs
@@ -194,7 +194,7 @@ model:
   global_batch_size: 64
   megatron_amp_O2: True
 
-  encoder_seq_length: 4096
+  encoder_seq_length: 10240
   max_position_embeddings: ${model.encoder_seq_length}
 
   ## Sequence Parallelism
