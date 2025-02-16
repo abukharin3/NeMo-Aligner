@@ -160,7 +160,7 @@ model:
     # length argument for autoregressive sampling
     # max length means max amount of tokens to generate
     length_params:
-      max_length: ${subtract:${model.encoder_seq_length}, ${trainer.grpo.inference_backend.max_input_len}}
+      max_length: 8192
       min_length: 1
 
     # pull from trainer, do not change here. Change at trainer.grpo.generation_rollout_mbs
