@@ -338,10 +338,11 @@ class RemoteGPTRMClient:
         return RMFutureResult(rm_future)
 
 
-async def get_reward():
+async def fetch_reward(url, conversations):
     async with httpx.AsyncClient() as client:
-        response = await client.post(url, json=query_data)
+        response = await client.post(url, json={"conversations": conversations})
         print(f"Reward Score: {response.json()['reward']}")
+        return response.json()['reward']
 
 @dataclass
 class RemoteHFRMClient:
@@ -384,10 +385,8 @@ class RemoteHFRMClient:
                         "content":assistant_text[j]
                     }
                 )
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json={"conversations":conversations})
-                print(f"Reward Score: {response.json()['reward']}")
-                rewards.append(response.json()['reward'])
+            reward = await fetch_reward(url, conversations)
+            rewards.append(reward)
         
         rewards = torch.Tensor(rewards, device=torch.cuda.current_device())
                 
