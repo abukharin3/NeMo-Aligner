@@ -249,12 +249,6 @@ class RMFutureResult(FutureResult):
         self.rm_future = None
         return rewards.flatten()
 
-class FakeFutureResult(FutureResult):
-    def __init__(self, rm_future):
-        self.rm_future = rm_future
-
-    def result(self):
-        return self.rm_future.flatten()
 
 
 @dataclass
@@ -343,6 +337,15 @@ async def fetch_reward(url, conversations):
         response = await client.post(url, json={"conversations": conversations})
         print(f"Reward Score: {response.json()['reward']}")
         return response.json()['reward']
+
+
+import asyncio
+
+class FakeFutureResult(asyncio.Future):
+    def __init__(self, rm_future):
+        super().__init__()
+        self.set_result(rm_future.flatten())
+
 
 @dataclass
 class RemoteHFRMClient:
