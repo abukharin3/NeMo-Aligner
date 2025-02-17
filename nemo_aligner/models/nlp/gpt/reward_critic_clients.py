@@ -388,7 +388,7 @@ class RemoteHFRMClient:
                         "content":assistant_text[j]
                     }
                 )
-            reward = fetch_reward(url, conversations)
+            reward = fetch_reward(self.url, conversations)
             print("reward", reward)
             rewards.append(reward)
         
