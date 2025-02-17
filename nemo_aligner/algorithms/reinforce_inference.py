@@ -325,6 +325,7 @@ class ReinforceInference:
             for i in range(len(futures_max)):
                 future_max = futures_max[i]
                 future_min = futures_min[i]
+                print("future max", future_max)
                 rewards_max = future_max.result()
                 rewards_min = future_min.result()
                 # rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.clip(self.cfg.reward_anchor - rewards_max.mean(), min=0) ** self.cfg.gamma_reward + 1)

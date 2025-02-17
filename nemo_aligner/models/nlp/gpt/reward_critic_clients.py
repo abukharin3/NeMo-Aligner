@@ -332,9 +332,9 @@ class RemoteGPTRMClient:
         return RMFutureResult(rm_future)
 
 
-async def fetch_reward(url, conversations):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(url, json={"conversations": conversations})
+def fetch_reward(url, conversations):
+    with httpx.Client() as client:
+        response = client.post(url, json={"conversations": conversations})
         print(f"Reward Score: {response.json()['reward']}")
         return response.json()['reward']
 
@@ -364,7 +364,7 @@ class RemoteHFRMClient:
         self.pad_to_length = self.cfg.pad_to_length
         self.template = cfg.reward_model.template
 
-    async def infer_rm_critic(self, rollout_batch, model):
+    def infer_rm_critic(self, rollout_batch, model):
         
         response_tokens = rollout_batch["response_tokens"].cpu()
         og_seq_length = response_tokens.size(-1)
@@ -388,7 +388,8 @@ class RemoteHFRMClient:
                         "content":assistant_text[j]
                     }
                 )
-            reward = await fetch_reward(url, conversations)
+            reward = fetch_reward(url, conversations)
+            print("reward", reward)
             rewards.append(reward)
         
         rewards = torch.Tensor(rewards, device=torch.cuda.current_device())
