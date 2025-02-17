@@ -24,6 +24,7 @@ from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.distributed import broadcast_2d_tensor_within_mp, gather_tensor, run_if_model_parallel_src
 from nemo_aligner.utils.server_utils import FutureResult
 import re
+import httpx
 """A remote client that acts like a real Reward Model and Critic forwards all requests from the actor
     over to the remote PyTrition server
 """
@@ -248,6 +249,13 @@ class RMFutureResult(FutureResult):
         self.rm_future = None
         return rewards.flatten()
 
+class FakeFutureResult(FutureResult):
+    def __init__(self, rm_future):
+        self.rm_future = rm_future
+
+    def result(self):
+        return self.rm_future.flatten()
+
 
 @dataclass
 class RemoteGPTRMClient:
@@ -288,3 +296,100 @@ class RemoteGPTRMClient:
         )
 
         return RMFutureResult(rm_future)
+
+@dataclass
+class RemoteGPTRMClient:
+    cfg: DictConfig
+
+    def __post_init__(self):
+        cfg = self.cfg
+
+        server_dict = {
+            cfg.reward_model.name: (cfg.reward_model.ip, cfg.reward_model.port)
+        }
+
+        self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
+        self.communicator.print_server_dict()
+        self.pad_to_length = self.cfg.pad_to_length
+        self.template = cfg.reward_model.template
+
+    def infer_rm_critic(self, rollout_batch, model):
+        response_tokens = rollout_batch["response_tokens"].cpu()
+        og_seq_length = response_tokens.size(-1)
+
+        texts = []
+        for i in range(rollout_batch["response_tokens"].size(0)):
+            text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+            user_text, assistant_text = extract_dialogue_llama(text + "<|start_header_id|>")
+            # print(user_text)
+            # print(assistant_text)
+            text = chat_template(user_text=user_text, assistant_text=assistant_text, template=self.template)
+            # print(text)
+            texts.append(text)
+
+        send_data = {
+            "sentences": _str_list2numpy(texts),
+            }
+
+        rm_future = run_if_model_parallel_src(
+            self.communicator.send_data_to_server, server_name=self.cfg.reward_model.name, data=send_data,
+        )
+
+        return RMFutureResult(rm_future)
+
+
+async def get_reward():
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=query_data)
+        print(f"Reward Score: {response.json()['reward']}")
+
+@dataclass
+class RemoteHFRMClient:
+    cfg: DictConfig
+
+    def __post_init__(self):
+        cfg = self.cfg
+
+        server_dict = {
+            cfg.reward_model.name: (cfg.reward_model.ip, cfg.reward_model.port)
+        }
+        self.url = f"http://{cfg.reward_model.ip}:{cfg.reward_model.port}/get_reward"
+
+        self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
+        self.communicator.print_server_dict()
+        self.pad_to_length = self.cfg.pad_to_length
+        self.template = cfg.reward_model.template
+
+    def infer_rm_critic(self, rollout_batch, model):
+        
+        response_tokens = rollout_batch["response_tokens"].cpu()
+        og_seq_length = response_tokens.size(-1)
+
+        texts = []
+        rewards = []
+        for i in range(rollout_batch["response_tokens"].size(0)):
+            text = model.tokenizer.ids_to_text(rollout_batch["response_tokens"][i, :rollout_batch["response_lengths"][i]].tolist())
+            user_text, assistant_text = extract_dialogue_llama(text + "<|start_header_id|>")
+            conversation = []
+            for j in range(len(user_text)):
+                conversations.append(
+                    {
+                        "role":"user",
+                        "content":user_text[j]
+                    }
+                )
+                conversations.append(
+                    {
+                        "role":"assistant",
+                        "content":assistant_text[j]
+                    }
+                )
+            async with httpx.AsyncClient() as client:
+                response = await client.post(url, json={"conversations":conversations})
+                print(f"Reward Score: {response.json()['reward']}")
+                rewards.append(response.json()['reward'])
+        
+        rewards = torch.Tensor(rewards, device=torch.cuda.current_device())
+                
+
+        return FakeFutureResult(rewards)
