@@ -8,12 +8,11 @@ import argparse
 # pip install fastapi; pip install -U transformers; pip install uvicorn
 
 # Load model and tokenizer
-device = "cuda:0"
 model_name = "/lustre/fsw/portfolios/llmservice/users/abukharin/reward_hacking/Skywork/Skywork-Reward-Gemma-2-27B-v0.2"
 rm = AutoModelForSequenceClassification.from_pretrained(
     model_name,
     torch_dtype=torch.bfloat16,
-    device_map=device,
+    device_map="auto",
     num_labels=1,
 )
 rm_tokenizer = AutoTokenizer.from_pretrained(model_name)
