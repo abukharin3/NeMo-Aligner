@@ -43,6 +43,7 @@ from nemo_aligner.utils.train_script_utils import (
     retrieve_custom_trainer_state_dict,
 )
 from nemo_aligner.utils.utils import load_and_override_model_config, load_from_nemo, retrieve_model_state_dict_in_cpu
+import time
 
 """Script to start PPO training"""
 
@@ -160,6 +161,10 @@ def main(cfg) -> None:
 
     rm_critic_max = RemoteHFRMClient(cfg.remote_critic_rm_max)
     rm_critic_min = RemoteGPTRMClient(cfg.remote_critic_rm_min)
+    
+
+    time.sleep(300) # Allow hf server to start
+
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
     batch_iterator_cfg = cfg.trainer.reinforce.get("batch_iterator", {})
