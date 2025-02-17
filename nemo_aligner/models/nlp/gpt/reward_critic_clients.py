@@ -376,13 +376,13 @@ class RemoteHFRMClient:
             user_text, assistant_text = extract_dialogue_llama(text + "<|start_header_id|>")
             conversation = []
             for j in range(len(user_text)):
-                conversations.append(
+                conversation.append(
                     {
                         "role":"user",
                         "content":user_text[j]
                     }
                 )
-                conversations.append(
+                conversation.append(
                     {
                         "role":"assistant",
                         "content":assistant_text[j]
