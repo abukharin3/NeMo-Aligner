@@ -392,7 +392,7 @@ class RemoteHFRMClient:
             print("reward", reward)
             rewards.append(reward)
         
-        rewards = torch.Tensor(rewards, device=torch.cuda.current_device())
+        rewards = torch.tensor(rewards).to(torch.cuda.current_device())
                 
 
         return FakeFutureResult(rewards)
