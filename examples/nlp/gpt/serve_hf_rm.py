@@ -30,7 +30,7 @@ async def get_reward(query: Query):
     conversation = query.conversation
     #conversation = [{"role": "user", "content": query.prompt}, {"role": "assistant", "content": query.response}]
     formatted = rm_tokenizer.apply_chat_template(conversation, tokenize=False)
-    tokenized = rm_tokenizer(formatted, return_tensors="pt").to(device)
+    tokenized = rm_tokenizer(formatted, return_tensors="pt")
 
     # Compute reward
     with torch.no_grad():
