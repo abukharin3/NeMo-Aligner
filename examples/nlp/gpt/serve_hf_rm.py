@@ -44,12 +44,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("Starting reward model server...")
-    try:
-        uvicorn.run(app, host="0.0.0.0", port=args.port)
-        break
-    except OSError as e:
-        if "Address already in use" in str(e):
-            print("Port busy, retrying...")
-            time.sleep(5)
-        else:
-            raise
+    for attempt in range(5):
+        try:
+            uvicorn.run(app, host="0.0.0.0", port=args.port)
+            break
+        except OSError as e:
+            if "Address already in use" in str(e):
+                print("Port busy, retrying...")
+                time.sleep(5)
+            else:
+                raise
