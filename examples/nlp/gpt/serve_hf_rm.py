@@ -48,9 +48,9 @@ if __name__ == "__main__":
         try:
             uvicorn.run(app, host="0.0.0.0", port=args.port)
             break
-        except OSError as e:
+        except Exception as e:
             if "Address already in use" in str(e):
                 print("Port busy, retrying...")
                 time.sleep(5)
             else:
-                raise
+                continue
