@@ -29,6 +29,8 @@ from omegaconf.dictconfig import DictConfig
 from safetensors.torch import save_file
 from huggingface_hub import snapshot_download
 
+from nemo_aligner.utils.utils import log_memory
+
 from nemo.collections.nlp.models.language_modeling.megatron_gpt_model import MegatronGPTModel
 from nemo.collections.nlp.modules.common.megatron.utils import (
     average_losses_across_data_parallel_group,
@@ -39,7 +41,7 @@ from nemo.collections.nlp.parts.mixins.nlp_adapter_mixins import NLPAdapterModel
 from nemo.collections.nlp.parts.utils_funcs import get_last_rank
 from nemo.utils import logging
 from nemo_aligner.models.alignable_interface import AlignableGenerativeInterface
-from nemo_aligner.utils import parallel_state
+from nemo_aligner.experimental.grpo.utils import parallel_state
 from nemo_aligner.utils.distributed import (
     broadcast_2d_tensor_within_pp,
     from_parallel_logits_to_logprobs,
@@ -70,6 +72,8 @@ from nemo_aligner.experimental.grpo.inference.utils.utils import parallel_save_c
 from nemo_aligner.experimental.grpo.inference.registry import get_backend, list_available_backends
 from nemo_aligner.experimental.grpo.models.nlp.gpt import conversion_dict as CONVERTER
 
+from tensor_comms.shared_tensors import SharedCPUMemoryTensorDict
+
 class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGenerativeInterface):
     def __init__(self, cfg: DictConfig, trainer: Trainer):
         super().__init__(cfg, trainer=trainer)
@@ -90,6 +94,7 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
 
         # Initialize the inference backend
         self.inference_backend = None
+        self.prepare_for_inference_warmed_up = False
         # Collect backends from the configuration and check which ones are enabled
         enabled_backends = [
             name for name in cfg.grpo.inference_backend.config.keys() 
@@ -137,13 +142,21 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
             )
         elif backend_type == "vllm":
             from nemo_aligner.experimental.grpo.inference.vllm.vllm_client import VLLMClient
+            sampling_params = {
+                "temperature": self.cfg.grpo.sampling_params["temperature"],
+                "top_p": self.cfg.grpo.sampling_params["top_p"],
+                "top_k": self.cfg.grpo.sampling_params["top_k"],
+                "max_tokens": self.cfg.grpo.length_params.get("max_length", 2048),
+                "logprobs": 0,
+            }
             backend = VLLMClient(
                 self.cfg.grpo.inference_backend.config.vllm,
                 use_reshard=self.cfg.grpo.inference_backend.get("reshard", False),
                 tokenizer=self.tokenizer,
                 checkpoint_path=self.cfg.grpo.share_dir,
+                sampling_params=sampling_params,
             )
-            self.pinned_cpu_state_dict = {}
+            self.shared_cpu_state_dict = SharedCPUMemoryTensorDict()
         elif backend_type == "trt_llm_pytorch":
 
             from nemo_aligner.experimental.grpo.inference.trtllm_pytorch.trtllm_pytorch_client import TRTLLMPytorchClient 
@@ -216,7 +229,7 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
                 with torch.no_grad():
                     grpo_ratio = masked_mean(ratios.detach(), mask)
                     grpo_ratio_clamped = masked_mean(ratios_clamped.detach(), mask)
-                    print(loss.shape, grpo_ratio.shape, grpo_ratio_clamped.shape, "loss shapes", flush=True)
+                    #print(loss.shape, grpo_ratio.shape, grpo_ratio_clamped.shape, "loss shapes", flush=True)
 
                 (
                     reduced_actor_loss,
@@ -242,7 +255,28 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
             gbs=self.cfg.global_batch_size,
             dp=parallel_state.get_data_parallel_world_size(),
         )
+
+        clear_memory()
+
+        log_memory("before offload parameters")
+        self.maybe_offload_parameters("Temporarily offload model weights for the shared inference backend to save memory")
+        clear_memory()
+        log_memory("after offload parameters")
+
+        log_memory("before init grad buffer")
+        self._optimizer._init_grad_buffer()
+        clear_memory()
+        log_memory("after init grad buffer")
+
+        log_memory("before onload parameters")
+        self.maybe_onload_parameters()
+        clear_memory()
+        log_memory("after onload parameters")
+
+        log_memory("before onload adam states")
         self.onload_adam_states()
+        clear_memory()
+        log_memory("after onload adam states")
 
     def prepare_for_training_step(self):
         # custom trainers will always zero grad for us
@@ -375,6 +409,7 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
                 return '{' + key + '}'
 
         with torch.no_grad():
+            checksum = 0
             import re  # For computing global keys from layer numbers
             # Initialize pipeline parallel group information.
             pp_group = parallel_state.get_training_pipeline_model_parallel_group()
@@ -479,12 +514,10 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
                     if torch.distributed.get_rank() != owner_pp_global_rank:
                         tensor_to_send = torch.empty(*shape, dtype=dtype, device=torch.cuda.current_device())
                     torch.distributed.broadcast(tensor_to_send, src=owner_pp_global_rank, group=pp_group)
-                    # use pinned cpu memory
+                    # use shared cpu memory
                     if torch.cuda.current_device() == 0:
-                        if target_key not in self.pinned_cpu_state_dict:
-                            self.pinned_cpu_state_dict[target_key] = tensor_to_send.cpu().pin_memory()
-                        else:
-                            self.pinned_cpu_state_dict[target_key].copy_(tensor_to_send)
+                        self.shared_cpu_state_dict[target_key] = tensor_to_send
+                        checksum += tensor_to_send.sum().item()
                     del tensor_to_send
                 
                 # Cleanup on the owner side.
@@ -501,6 +534,7 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
             gc.collect()
             torch.cuda.empty_cache()
             print("Finished parameter-by-parameter gathering over PP with conversion mapping.", flush=True)
+            print(f"Checksum: {checksum}", flush=True)
         
             # Copy HF jsons to CPU ramdisk with proper permissions and save the gathered parameters.
             if torch.cuda.current_device() == 0:
@@ -518,8 +552,11 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
         
                 try:
                     ptime = time.time()
-                    save_file(self.pinned_cpu_state_dict, os.path.join(out_dir, f"params.safetensors"))
-                    print(f"Saved to {out_dir} {list(os.listdir(out_dir))} {time.time() - ptime}", flush=True)
+                    if not self.prepare_for_inference_warmed_up:
+                        #save_file(self.shared_cpu_state_dict.as_dict(), os.path.join(out_dir, f"params.safetensors"))
+                        self.prepare_for_inference_warmed_up = True
+                        print(f"Saved to {out_dir} {list(os.listdir(out_dir))} {time.time() - ptime}", flush=True)
+                    torch.distributed.broadcast_object_list([self.shared_cpu_state_dict.get_metadata_dict()], src=torch.distributed.get_rank(), group=parallel_state.get_node_group())
                 except Exception as e:
                     print(f"Error saving params.safetensors: {e}", flush=True)
                     if os.path.exists(out_dir):
@@ -528,6 +565,16 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
                         except Exception:
                             pass
                     raise
+            else:
+                recv_metadata = [None]
+                torch.distributed.broadcast_object_list(
+                    recv_metadata,
+                    src=torch.distributed.get_rank() - torch.distributed.get_rank(group=parallel_state.get_node_group()),
+                    group=parallel_state.get_node_group()
+                )
+                self.shared_cpu_state_dict = SharedCPUMemoryTensorDict(
+                    communicable_metadata=recv_metadata[0]
+                )
 
         torch.distributed.barrier()
         print(f"MP group: {parallel_state.get_model_parallel_group()}", flush=True)
@@ -537,9 +584,16 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
         if self.inference_backend:
             # Refitting or recompiling the inference model for generation
             print(f"Memory free before clear before refit {torch.cuda.mem_get_info()[0] / 1024**3:.2f} GB", flush=True)
+            print(f"reserved before clear before refit {torch.cuda.memory_reserved() / 1024**3:.2f} GB", flush=True)
+            print(f"allocated before clear before refit {torch.cuda.memory_allocated() / 1024**3:.2f} GB", flush=True)
             clear_memory()
             print(f"Memory free after clear before refit {torch.cuda.mem_get_info()[0] / 1024**3:.2f} GB", flush=True)  
-            self.inference_backend.refit(self.model)
+            print(f"reserved after clear before refit {torch.cuda.memory_reserved() / 1024**3:.2f} GB", flush=True)
+            print(f"allocated after clear before refit {torch.cuda.memory_allocated() / 1024**3:.2f} GB", flush=True)
+            if self.cfg.grpo.inference_backend.type == "vllm":
+                self.inference_backend.refit(self.shared_cpu_state_dict)
+            else:
+                self.inference_backend.refit(self.model)
             clear_memory()
             print(f"Memory free after clear after refit {torch.cuda.mem_get_info()[0] / 1024**3:.2f} GB", flush=True)
 
@@ -629,8 +683,8 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
         self._restore_activation_checkpointing_args()
         self._restore_sequence_parallelism_args()
 
-        if self.inference_backend:
-            self.inference_backend.free()
+        # if self.inference_backend:
+        #     self.inference_backend.free()
 
 
         set_train(self)
@@ -669,6 +723,16 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
 
             # offload onto cpu
             self.distributed_adam_offload_manager.__enter__()
+
+            for k,v in self._optimizer._grad_buffers.items():
+                v.data = v.data.cpu()
+            
+            self._optimizer._grad_buffers.clear()
+            self._optimizer._grad_buffers.clear()
+            self._optimizer._params_buckets.clear()
+            self._optimizer._param_buffers.clear()
+            clear_memory()
+
 
     def onload_adam_states(self):
         if self.distributed_adam_offload_manager is not None:

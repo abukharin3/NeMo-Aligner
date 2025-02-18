@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from functools import partial
+from collections import UserDict
 
 import torch
 import torch.multiprocessing as mp
@@ -23,10 +24,9 @@ from nemo.utils import logging
 from nemo.utils.exp_manager import exp_manager
 from nemo_aligner.experimental.grpo.algorithms.grpo import GRPOTrainer
 from nemo_aligner.data.nlp.builders import (
-    build_dataloader,
     collate_with_pad_to_max_batch,
 )
-from nemo_aligner.experimental.grpo.data.builders import build_train_valid_test_task_datasets, environment_collate_with_pad_to_max_batch
+from nemo_aligner.experimental.grpo.data.builders import build_train_valid_test_task_datasets, environment_collate_with_pad_to_max_batch, build_dataloader
 from nemo_aligner.experimental.grpo.data.datasets import AllTaskDataset
 from nemo_aligner.experimental.grpo.models.nlp.gpt.megatron_gpt_grpo_actor import MegatronGPTActorModel
 from nemo_aligner.experimental.grpo.experience.environments.math_environment import MathEnvironment
@@ -166,11 +166,10 @@ def main(cfg) -> None:
     # init environments and rollout generator
     math_environment = MathEnvironment(cfg.trainer.grpo.environments.math)
     code_environment = CodeEnvironment(cfg.trainer.grpo.environments.code)
+    tasks_to_environments = {k:MathEnvironment(cfg.trainer.grpo.environments.math) for k in {"aime24", "amc23", "math", "qwq_sol_gen_no_ans_c4", "qwq_sol_gen_no_ans_c7", "qwq_sol_gen_no_ans_olymp_pr_gt03", "qwq_sol_gen_no_ans_olymp_pr_lt03"}}
+    tasks_to_environments["code"] = code_environment
     # your_environment = Environment(cfg)
-    tasks_to_environments = {
-        "math": math_environment,
-        "code": code_environment,
-    }
+
     rollout_generator = SequenceRewardRolloutGenerator(cfg.trainer.grpo, tasks_to_environments)
 
     timer = Timer(cfg.exp_manager.get("max_time_per_run") if cfg.exp_manager else None)

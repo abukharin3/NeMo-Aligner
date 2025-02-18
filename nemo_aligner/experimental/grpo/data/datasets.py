@@ -19,6 +19,8 @@ import torch
 from nemo.collections.nlp.modules.common.megatron.utils import get_ltor_masks_and_position_ids
 from nemo_aligner.utils.utils import batch_pad_to_fixed_len
 
+HARD_CODED_PROMPT_TEMPLATE = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\ndetailed thinking on<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nBelow is a math question. I want you to reason through the steps and then give a final answer. Your final answer should be in \\boxed{{}}.\nQuestion: {}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+
 #TODO @sahilj handle too-long prompts and masking them out throughout the whole process and renormalizing on loss
 class AllTaskDataset:
     def __init__(self, data_path, tokenizer, apply_chat_template: bool = True, system_prompt_file: str = None, prompt_file: str = None, seq_length=None):
@@ -48,7 +50,9 @@ class AllTaskDataset:
                 f"prompt file {prompt_file} was specified but does not exist"
             with open(prompt_file, "r", encoding="utf-8") as f:
                 self.prompt = f.read()
-        
+        else:
+            self.prompt = HARD_CODED_PROMPT_TEMPLATE
+
     def __len__(self):
         return len(self.data)
 
@@ -60,9 +64,13 @@ class AllTaskDataset:
         """
         Return a single prompt.
         """
-        task_name = self.data[idx]["task_name"]
+        if "task_name" not in self.data[idx]:
+            task_name = self.data[idx]["dataset"]
+        else:
+            task_name = self.data[idx]["task_name"]
+
         extra_verifier_info = None
-        if task_name == "math":
+        if task_name in ["aime24", "amc23", "math", "qwq_sol_gen_no_ans_c4", "qwq_sol_gen_no_ans_c7", "qwq_sol_gen_no_ans_olymp_pr_gt03", "qwq_sol_gen_no_ans_olymp_pr_lt03"]: #== "math":
             text_str = self.data[idx]["problem"]
             extra_verifier_info = {"ground_truth": self.data[idx]["expected_answer"]}
         elif task_name == "code":
@@ -82,7 +90,7 @@ class AllTaskDataset:
             text = self.tokenizer.tokenizer.apply_chat_template(chat, tokenize=False, add_generation_prompt=True)
         else:
             text = self.prompt.format(text_str)
-
+        
         sample, _ = self.encode(text)
         sample_tensor = torch.as_tensor(sample, dtype=torch.int64)
         

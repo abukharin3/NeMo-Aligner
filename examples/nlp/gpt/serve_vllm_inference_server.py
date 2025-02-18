@@ -17,7 +17,7 @@ in_q = mp.Queue()
 out_q = mp.Queue()
 inference_process = None
 
-def worker_process(in_queue, out_queue, load_path, tp):
+def worker_process(in_queue, out_queue, load_path, tp, test_state_dict=None):
     import torch
     import gc
     import glob
@@ -27,6 +27,7 @@ def worker_process(in_queue, out_queue, load_path, tp):
     from vllm.distributed.parallel_state import destroy_model_parallel, destroy_distributed_environment
     import time
     from vllm.model_executor.model_loader.weight_utils import safetensors_weights_iterator
+    from tensor_comms.shared_tensors import SharedCPUMemoryTensorDict
 
     class MyWorker(Worker):
         def clean_cuda_memory(self):
@@ -49,6 +50,19 @@ def worker_process(in_queue, out_queue, load_path, tp):
                     weight.zero_()
                 self.model_runner.model.load_weights(weights=[(name, weight)])
                 del weight
+        
+        def update_weights_from_shared_dict(self, shared_dict: dict):
+            shared_cpu_state_dict = SharedCPUMemoryTensorDict(communicable_metadata=shared_dict)
+            # checksum_pre = 0
+            # checksum = 0
+            with torch.no_grad():
+                for key, value in shared_cpu_state_dict.as_dict().items():
+                    # checksum_pre += value.sum().item()
+                    #print(f"Key: {key} {value[0]} {value.shape} {value.dtype}", flush=True)
+                    self.model_runner.model.load_weights(weights=[(key, value)])
+                    # checksum += value.sum().item()
+            # print(f"Checksum: {checksum} {checksum_pre}", flush=True)
+            shared_cpu_state_dict.close()
     
     class VLLMInferenceServer:
         """
@@ -65,11 +79,12 @@ def worker_process(in_queue, out_queue, load_path, tp):
             self.llm = LLM(
                 model=path,
                 worker_cls=MyWorker,
+                load_format='dummy',
                 device='cuda',
                 tensor_parallel_size=tp, 
                 generation_config='auto', 
                 enforce_eager=True, 
-                gpu_memory_utilization=.5, 
+                gpu_memory_utilization=.7, 
                 enable_sleep_mode=True,
                 trust_remote_code=True,
             )
@@ -77,22 +92,16 @@ def worker_process(in_queue, out_queue, load_path, tp):
             print("vLLM Inference Server started.")
 
         def sleep(self):
-            #return
-            #self.llm.llm_engine.reset_prefix_cache()
-            #for worker in self.llm.llm_engine.model_executor.workers:
-            #    worker.execute_method("reset")
-            #self.llm.llm_engine.model_executor.driver_worker.worker.reset()
             self.llm.sleep(level=1)
             self.asleep = True
 
         def wake_up(self):
-            #return
             torch.cuda.synchronize()
             self.llm.wake_up()
             torch.cuda.synchronize()
             self.asleep = False
 
-        def refit(self, path, zero_init: bool = False):
+        def refit(self, path, state_dict: dict, test_dict: dict, zero_init: bool = False):
             start = time.time()
             if self.asleep:
                 free_bytes_before_wake = torch.cuda.mem_get_info()[0]
@@ -111,8 +120,8 @@ def worker_process(in_queue, out_queue, load_path, tp):
 
             # load weights
             for worker in self.llm.llm_engine.model_executor.workers:
-                worker.execute_method("update_full_weights", path, zero_init=zero_init)
-            self.llm.llm_engine.model_executor.driver_worker.worker.update_full_weights(path, zero_init=zero_init)
+                worker.execute_method("update_weights_from_shared_dict", state_dict)
+            self.llm.llm_engine.model_executor.driver_worker.worker.update_weights_from_shared_dict(state_dict)
 
             elapsed_time = time.time() - start
             print(f"vLLM Refit ({elapsed_time:.2f} seconds elapsed)")
@@ -131,18 +140,18 @@ def worker_process(in_queue, out_queue, load_path, tp):
             self.running = False
             print("vLLM Inference Server shutdown.")
 
-        def generate(self, batch_tokens):
+        def generate(self, batch_tokens: list[list[int]], sampling_params: dict):
             """
             For each sequence in batch_tokens, we generate:
               - a new sequence of output tokens
               - a list of logprobs (one per token in the generated sequence)
             """
             sampling_params = SamplingParams(
-                temperature=1.0,
-                top_p=1.0,
-                top_k=-1,
+                temperature=sampling_params.get("temperature", 1.0),
+                top_p=sampling_params.get("top_p", 1.0),
+                top_k=sampling_params.get("top_k", -1),
                 logprobs=0,
-                max_tokens=2048,
+                max_tokens=sampling_params.get("max_tokens", 3072),
                 #ignore_eos=True,
             )
 
@@ -162,6 +171,15 @@ def worker_process(in_queue, out_queue, load_path, tp):
 
     server = VLLMInferenceServer()
     server.start(load_path, tp)
+    server.llm.llm_engine.reset_prefix_cache()
+    for worker in server.llm.llm_engine.model_executor.workers:
+        worker.execute_method("reset")
+    server.llm.llm_engine.model_executor.driver_worker.worker.reset()
+
+    # load weights
+    for worker in server.llm.llm_engine.model_executor.workers:
+        worker.execute_method("update_weights_from_shared_dict", test_state_dict)
+    server.llm.llm_engine.model_executor.driver_worker.worker.update_weights_from_shared_dict(test_state_dict)
 
     while True:
         command, args = in_queue.get()
@@ -170,13 +188,16 @@ def worker_process(in_queue, out_queue, load_path, tp):
             return
         elif command == "generate":
             batch_tokens = args[0]
-            out_queue.put(server.generate(batch_tokens))
+            sampling_params = args[1]
+            out_queue.put(server.generate(batch_tokens, sampling_params))
         elif command == "sleep":
             server.sleep()
             out_queue.put("asleep")
         elif command == "refit":
             path = args[0]
-            server.refit(path, zero_init=False)
+            state_dict = args[1]
+            test_dict = args[2]
+            server.refit(path, state_dict, test_dict, zero_init=False)
             out_queue.put("refitted")
         else:
             raise NotImplementedError("Unknown Command")
@@ -195,7 +216,7 @@ def start_server():
     data = request.get_json()
     # set CUDA_VISIBLE_DEVICES to the TP group (str)
     os.environ["CUDA_VISIBLE_DEVICES"]=",".join(map(str, list(range(data["tp_src_gpu_idx"], data["tp_src_gpu_idx"]+data["tp"]))))
-    inference_process = mp.Process(target=worker_process, args=(in_q, out_q, data["checkpoint_path"], data["tp"]))
+    inference_process = mp.Process(target=worker_process, args=(in_q, out_q, data["checkpoint_path"], data["tp"], data["test_state_dict"]))
     inference_process.start()
     return jsonify({"status": "started"}), 200
 
@@ -218,7 +239,7 @@ def refit_server():
     global inference_process
     global in_q
     data = request.get_json()
-    in_q.put(("refit", (data["checkpoint_path"], )))
+    in_q.put(("refit", (data["checkpoint_path"], data["state_dict"], data["test_dict"])))
     response = out_q.get()
     return jsonify({"status": response}), 200
 
@@ -258,17 +279,19 @@ def generate():
     import time
     start_time = time.time()
     data = request.get_json()
+    tokens = data["tokens"]
+    sampling_params = data["sampling_params"]
     end_time = time.time()
     print(f"Request get_json time: {end_time - start_time} seconds")
-    if not isinstance(data, list):
+    if not isinstance(tokens, list):
         return jsonify({"error": "Expected a list of lists of tokens"}), 400
 
     # Validate that each element in the list is itself a list
-    for i, item in enumerate(data):
+    for i, item in enumerate(tokens):
         if not isinstance(item, list):
             return jsonify({"error": f"Element at index {i} is not a list"}), 400
 
-    in_q.put(("generate", (data,)))
+    in_q.put(("generate", (tokens, sampling_params)))
     generations, logprobs = out_q.get()
     response = {
         "response_tokens": generations,

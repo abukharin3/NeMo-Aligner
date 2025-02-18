@@ -130,6 +130,7 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
                         num_rollout_batches_per_data_batch = self.samples_per_prompt // num_repetitions
 
                     print(batch["text"].shape)
+                    print(f"batch idxs: {batch['idx']}", flush=True)
                     batch = batch_repeat(batch, num_repetitions=num_repetitions)
                     for _ in range(num_rollout_batches_per_data_batch):
                         rollout_batch = policy_model.infer(batch, use_greedy=greedy)
@@ -141,7 +142,7 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
 
                         # iterate over tasks and call the environments to get rewards
                         microbatch_futures = []
-                        for task in self.tasks_to_environments.keys():
+                        for task in sorted(self.tasks_to_environments.keys()):
                             indices = []
                             for idx, t in enumerate(rollout_batch["task_name"]):
                                 if t == task:
@@ -153,6 +154,7 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
 
                         rollout_batches.append(rollout_batch)
                         futures.append(microbatch_futures)
+                        print(f"microbatch_futures: {microbatch_futures}", flush=True)
 
             # The batch_iterator may be a load-redistributing server, so batches may be jagged.
             # We gather everything so that we can rebalance it.
@@ -174,6 +176,8 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
         # since we compute the logprobs in nemo we need to be outside the generation resharding context
         # we also do the logprob and init_logprob calculations here to overlap with async environment compute
         batched_response_tokens = balanced_local_batch["response_tokens"]
+
+        policy_model.inference_backend.free()
 
         with self.timer("logprobs"):
             rollout_logprobs = policy_model.get_inference_log_probs(batched_response_tokens)
@@ -198,7 +202,10 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
                         _, _, rewards, episode_complete = self.tasks_to_environments[task].finish_step(task_future)
                         # not touching episode_complete for now since this loop only supports single-turn
                         all_task_results.append({"rewards": rewards})
+                    print(f"all_task_indices: {all_task_indices}, all_task_results: {all_task_results}", flush=True)
                     batch_rewards = reconstruct_split_batch(all_task_indices, all_task_results)
+                    print("### TASK INDX", all_task_indices)
+                    print("### TASK RESULTS", all_task_results)
                     env_rollout_batches.append(batch_rewards)
 
             unbalanced_env_batch = GPTRolloutBatch.from_rollout_batches(
@@ -208,9 +215,9 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
             )
             global_env_batch = unbalanced_env_batch.gather_and_balance_globally()
 
-        global_rollout_batch.update(global_env_batch)
-        with self.timer("env_postproc_and_metrics"):
-            global_rollout_batch, metrics = self.post_process_and_compute_rollout_metrics(global_rollout_batch)
+            global_rollout_batch.update(global_env_batch)
+            with self.timer("env_postproc_and_metrics"):
+                global_rollout_batch, metrics = self.post_process_and_compute_rollout_metrics(global_rollout_batch)
 
         # saving generations
         with self.timer("generation_save"):
@@ -223,7 +230,7 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
     def post_process_and_compute_rollout_metrics(self, global_rollout_batch):
         # iterate over tasks and call the environments to get metrics and finalized batches
         split_idxs, split_batches, metrics = [], [], {}
-        for task in self.tasks_to_environments.keys():
+        for task in sorted(self.tasks_to_environments.keys()):
             indices = []
             for idx, t in enumerate(global_rollout_batch["task_name"]):
                 if t == task:

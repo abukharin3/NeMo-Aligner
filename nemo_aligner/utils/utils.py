@@ -692,7 +692,7 @@ def make_sharded_tensors_from_reference(reference_param, model_param, prefix: st
 def log_memory(prefix):
     pyt = torch.cuda.memory_allocated() / (1024 ** 3)
     el = (torch.cuda.mem_get_info()[1] - torch.cuda.mem_get_info()[0]) / (1024 ** 3)
-    logging.info(f"Mem Usage (GB) | {prefix} | pytorch:{pyt} total_occupied:{el} | memory_other_than_pyt:{el-pyt}")
+    print(f"Mem Usage (GB) | {prefix} | pytorch:{pyt} total_occupied:{el} | memory_other_than_pyt:{el-pyt}")
 
 
 def deprecated_in_version(version: str, message: str | None = None):
@@ -768,7 +768,6 @@ def reconstruct_split_batch(
     Args:
         split_batches: List of data dictionaries (without indices/task keys)
         indices_list: Parallel list containing indices for each split batch
-        tasks: Parallel list of task identifiers (same length as split_batches)
     
     Returns:
         Dictionary reconstructing the original batch with correct ordering
@@ -780,17 +779,21 @@ def reconstruct_split_batch(
             indices = indices.tolist()
         all_indices.extend(indices)
     n = max(all_indices) + 1 if all_indices else 0
+    print("#### ALL INDICES", all_indices)
+    print("#### N", n)
 
     if not split_batches:
         return {}
 
     original_batch = {}
+    print("### SPLIT BATCHES", split_batches)
 
     # Process each key present in the split batches
     for key in split_batches[0].keys():
         sample_value = split_batches[0][key]
 
         if isinstance(sample_value, torch.Tensor):
+            print("### SAMPLE VALUE", sample_value.shape)
             # Tensor reconstruction with device preservation
             device = sample_value.device
             dtype = sample_value.dtype
@@ -803,6 +806,8 @@ def reconstruct_split_batch(
                     indices = indices.to(device)
                 else:
                     indices = torch.tensor(indices, device=device)
+                print("### DATA", data.shape)
+                print("### INDICES", indices.shape)
                 reconstructed[indices] = data
 
             original_batch[key] = reconstructed
