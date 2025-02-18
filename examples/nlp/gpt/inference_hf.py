@@ -163,7 +163,7 @@ def main(cfg) -> None:
     rm_critic_min = RemoteGPTRMClient(cfg.remote_critic_rm_min)
     
 
-    time.sleep(60) # Allow hf server to start
+    time.sleep(180) # Allow hf server to start
 
     timer = Timer(cfg.exp_manager.get("max_time_per_run"))
 
