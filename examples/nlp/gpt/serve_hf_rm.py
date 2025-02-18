@@ -45,7 +45,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("Starting reward model server...")
-    uvicorn.run(app, host="0.0.0.0", port=args.port + attempt)
+    uvicorn.run(app, host="0.0.0.0", port=args.port)
 
     
     time.sleep(36000)
