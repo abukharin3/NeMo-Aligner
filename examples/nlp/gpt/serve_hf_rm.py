@@ -22,8 +22,7 @@ rm_tokenizer = AutoTokenizer.from_pretrained(model_name)
 app = FastAPI()
 
 class Query(BaseModel):
-    prompt: str
-    response: str
+    conversation: list
 
 @app.post("/get_reward")
 async def get_reward(query: Query):
