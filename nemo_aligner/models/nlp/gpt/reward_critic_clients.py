@@ -332,9 +332,9 @@ class RemoteGPTRMClient:
         return RMFutureResult(rm_future)
 
 
-def fetch_reward(url, conversations):
+def fetch_reward(url, conversation):
     with httpx.Client() as client:
-        response = client.post(url, json={"conversations": conversations})
+        response = client.post(url, json={"conversation": conversation})
         print(f"Reward Score: {response.json()['reward']}")
         return response.json()['reward']
 
