@@ -76,6 +76,9 @@ class AllTaskDataset:
         elif task_name == "code":
             text_str = self.data[idx]["prompt"]
             extra_verifier_info = {"unittests": self.data[idx]["args"]["unittests"], "test_type": self.data[idx]["args"]["test_type"], "fn_name": self.data[idx]["args"].get("fn_name", None)}
+        elif task_name == "ifeval":
+            text_str = self.data[idx]["prompt"]
+            extra_verifier_info = {"instruction_id_list": self.data[idx]["args"]["instruction_id_list"], "instruction_kwargs": self.data[idx]["args"]["instruction_kwargs"]}
         else:
             raise NotImplementedError(f"task name {task_name} in your dataset doesn't have a handler yet!")
 
