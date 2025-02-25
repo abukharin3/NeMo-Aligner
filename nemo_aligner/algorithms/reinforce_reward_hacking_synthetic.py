@@ -335,6 +335,12 @@ class ReinforceHackerSynthetic:
                 rewards_min = future_min.result()
                 rewards_gt = future_gt.result()
                 # rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min / (torch.clip(self.cfg.reward_anchor - rewards_max.mean(), min=0) ** self.cfg.gamma_reward + 1)
+                print("rewards_max", rewards_max)
+                print("rewards_min", rewards_min)
+                print("rewards_min", rewards_min)
+                print("gq", (rewards_max > self.cfg.reward_anchor).float())
+                print("lq", (rewards_max < self.cfg.reward_anchor).float(), self.cfg.penalty, self.cfg.lam2, self.cfg.lam1)
+
                 rewards = self.cfg.lam1 * rewards_max - self.cfg.lam2 * rewards_min * (rewards_max > self.cfg.reward_anchor).float() + (rewards_max < self.cfg.reward_anchor).float() * self.cfg.penalty
                 
                 rm_value_rollout_batches.append({"rewards": rewards, "rewards_to_max":rewards_max, "rewards_to_min": rewards_min, "rewards_gt": rewards_gt})
