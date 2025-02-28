@@ -115,7 +115,7 @@ class VLLMClient:
             ret_val = None
             print(f"MP source rank: {parallel_state.get_model_parallel_src_rank()}", flush=True)
             if torch.distributed.get_rank() == parallel_state.get_model_parallel_src_rank():
-                if not self.server_started:
+                if True: #not self.server_started:
                     url = f"{self.base_url}/start"
                     try:
                         data = {
@@ -217,6 +217,8 @@ class VLLMClient:
         return tensors
 
     def free(self):
+        self.shutdown()
+        return
         """Put the vLLM inference server to sleep."""
         context = nullcontext() if parallel_state.is_inference_reshard() else self.reshard_context()
         with context:
