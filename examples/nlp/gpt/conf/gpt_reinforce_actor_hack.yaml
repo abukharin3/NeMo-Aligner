@@ -36,7 +36,7 @@ trainer:
     penalty: -25
     reward_anchor: -3
     save_response: True
-
+    ensemble_type: mean
 
     # the sequence length to pad the rollout batch for training to
     # reduce fragmentation at the cost of using more
