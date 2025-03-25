@@ -47,6 +47,11 @@ trainer:
           code_verifier:
             ip: localhost
             port: 3142
+      ifeval:
+        servers:
+          ifeval_grader:
+            ip: localhost
+            port: 3143
     # the sequence length to pad the rollout batch for training to
     # reduce fragmentation at the cost of using more
     # memory, set to null if we don't want to pad it

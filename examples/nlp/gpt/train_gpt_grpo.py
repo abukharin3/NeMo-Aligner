@@ -31,6 +31,7 @@ from nemo_aligner.experimental.grpo.data.datasets import AllTaskDataset
 from nemo_aligner.experimental.grpo.models.nlp.gpt.megatron_gpt_grpo_actor import MegatronGPTActorModel
 from nemo_aligner.experimental.grpo.experience.environments.math_environment import MathEnvironment
 from nemo_aligner.experimental.grpo.experience.environments.code_environment import CodeEnvironment
+from nemo_aligner.experimental.grpo.experience.environments.ifeval_environment import IFEvalEnvironment
 from nemo_aligner.experimental.grpo.experience.rollout_generator import SequenceRewardRolloutGenerator
 from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.batch_iterators import get_batch_iterator_cls
@@ -170,6 +171,7 @@ def main(cfg) -> None:
     tasks_to_environments = {k:MathEnvironment(cfg.trainer.grpo.environments.math) for k in {"aime24", "amc23", "math", "qwq_sol_gen_no_ans_c4", "qwq_sol_gen_no_ans_c7", "qwq_sol_gen_no_ans_olymp_pr_gt03", "qwq_sol_gen_no_ans_olymp_pr_lt03", "deepscaler"}}
     tasks_to_environments["code"] = CodeEnvironment(cfg.trainer.grpo.environments.code)
     tasks_to_environments["code_mbppplus_test"] = CodeEnvironment(cfg.trainer.grpo.environments.code)
+    tasks_to_environments["ifeval"] = IFEvalEnvironment(cfg.trainer.grpo.environments.ifeval)
     rollout_generator = SequenceRewardRolloutGenerator(cfg.trainer.grpo, tasks_to_environments)
 
     timer = Timer(cfg.exp_manager.get("max_time_per_run") if cfg.exp_manager else None)

@@ -76,6 +76,9 @@ class AllTaskDataset:
         if task_name == "code":
             text_str = self.data[idx]["prompt"]
             extra_verifier_info = {"unittests": self.data[idx]["args"]["unittests"], "test_type": self.data[idx]["args"]["test_type"], "fn_name": self.data[idx]["args"].get("fn_name", None)}
+        elif task_name == "ifeval":
+            text_str = self.data[idx]["prompt"]
+            extra_verifier_info = {"args": self.data[idx]["args"]}
         elif ("args" in self.data[idx] and task_name == "deepscaler") or "text" in self.data[idx]:
             text_str = self.data[idx]["text"]
             extra_verifier_info = {"ground_truth": self.data[idx]["args"]["answer"]}
