@@ -464,7 +464,7 @@ class GRPOTrainer:
 
                 if save_model:
                     step_metrics = {k: torch.as_tensor(v) for k, v in filter(lambda i: not isinstance(i[1], dict), step_metrics.items())}
-                    self.save(step_metrics, is_train_end=is_train_end)
+                    self.save(step_metrics, is_train_end=is_train_end, run_val=run_val)
 
                 if run_time_exceeded:
                     logging.info(f"Time limit given by run_timer={self.run_timer} reached. Stopping run")
@@ -495,13 +495,13 @@ class GRPOTrainer:
         # restore max steps we need to run for
         self.set_max_steps()
 
-    def save(self, extra_candidates=None, is_train_end=False):
+    def save(self, extra_candidates=None, is_train_end=False, run_val=False):
         self.model.prepare_for_training()
         # load back in the adam states if needed
         torch.cuda.synchronize()
         torch.distributed.barrier()
 
-        if extra_candidates is None:
+        if extra_candidates is None or run_val is False:
             extra_candidates = {}
 
         log_memory("Before monitor candidate")
