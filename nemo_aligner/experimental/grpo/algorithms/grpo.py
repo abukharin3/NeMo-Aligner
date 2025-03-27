@@ -145,7 +145,7 @@ class GRPOTrainer:
 
         baseline, reward_std = calculate_baseline_and_std_per_prompt(
                 prompts=rollout_batch["text"],
-                rewards=rollout_batch["rewards"],
+                rewards=rewards,
                 valid_mask=rollout_batch["is_end"],
                 leave_one_out_baseline=self.cfg.use_leave_one_out_baseline
             )
