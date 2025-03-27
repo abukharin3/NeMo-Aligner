@@ -175,6 +175,7 @@ class GRPOTrainer:
         # compute metrics
         if self.cfg.get("importance_sample_correct", False):
             # logprobs is left rolled by 1 and padded to the rollout max_seqlen. So apply the same to "response_trt_lps"
+            trt_lps = rollout_batch["response_trt_lps"][:, 1:]
             rollout_batch_size = rollout_batch['logprobs'].size()
             trt_lps_size = trt_lps.size()
             if trt_lps_size[1] == rollout_batch_size[1] - 1:
