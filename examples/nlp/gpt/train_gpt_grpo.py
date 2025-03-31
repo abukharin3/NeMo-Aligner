@@ -173,6 +173,7 @@ def main(cfg) -> None:
     tasks_to_environments["code"] = CodeEnvironment(cfg.trainer.grpo.environments.code)
     tasks_to_environments["code_mbppplus_test"] = CodeEnvironment(cfg.trainer.grpo.environments.code)
     tasks_to_environments["ifeval"] = IFEvalEnvironment(cfg.trainer.grpo.environments.ifeval)
+    tasks_to_environments["instruction_following"] = IFEvalEnvironment(cfg.trainer.grpo.environments.ifeval)
     tasks_to_environments["rm"] = RMEnvironment(cfg.trainer.grpo.environments.rm)
     rollout_generator = SequenceRewardRolloutGenerator(cfg.trainer.grpo, tasks_to_environments)
 

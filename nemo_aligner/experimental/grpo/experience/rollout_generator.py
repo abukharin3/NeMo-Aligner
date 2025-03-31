@@ -151,6 +151,7 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
                     for task in sorted(self.tasks_to_environments.keys()):
                         indices = []
                         for idx, t in enumerate(rollout_batch["task_name"]):
+                            print(f"task: {task}, t: {t}")
                             if t == task:
                                 indices.append(idx)
                         if len(indices) > 0:
