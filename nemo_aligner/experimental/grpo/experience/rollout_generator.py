@@ -217,12 +217,14 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
                     for task, batch_indices, task_future in batch_futures:
                         all_task_indices.append(batch_indices)
                         _, _, rewards, episode_complete = self.tasks_to_environments[task].finish_step(task_future)
+                        print(f"rewards: {rewards}")
                         # not touching episode_complete for now since this loop only supports single-turn
                         all_task_results.append({"rewards": rewards})
-                    # print(f"all_task_indices: {all_task_indices}, all_task_results: {all_task_results}", flush=True)
+                    print(f"all_task_indices: {all_task_indices}, all_task_results: {all_task_results}", flush=True)
                     batch_rewards = reconstruct_split_batch(all_task_indices, all_task_results)
-                    # print("### TASK INDX", all_task_indices)
-                    # print("### TASK RESULTS", all_task_results)
+                    print(f"batch_rewards: {batch_rewards}")
+                    print("### TASK INDX", all_task_indices)
+                    print("### TASK RESULTS", all_task_results)
                     env_rollout_batches.append(batch_rewards)
 
             unbalanced_env_batch = GPTRolloutBatch.from_rollout_batches(
@@ -272,6 +274,7 @@ class SequenceRewardRolloutGenerator(RolloutGeneratorInterface):
                 inst[k] = batch[k][idx]
             return inst
 
+        print(f"rollout_batch: {rollout_batch.keys()}")
         prompt_lengths = rollout_batch["prompt_lengths"]
         response_lengths = rollout_batch["response_lengths"]
         rewards = rollout_batch["rewards"]
