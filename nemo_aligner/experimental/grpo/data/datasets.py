@@ -70,7 +70,7 @@ class AllTaskDataset:
             task_name = self.data[idx]["dataset"]
         else:
             task_name = self.data[idx]["task_name"]
-
+        print(f"task_name: {task_name}")
         extra_verifier_info = None
         # hard code to math for now
         if task_name == "code":
