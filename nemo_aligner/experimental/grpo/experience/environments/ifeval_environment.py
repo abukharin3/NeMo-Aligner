@@ -44,6 +44,7 @@ class IFEvalEnvironment(EnvironmentInterface):
                 "args": args,
                 "prompts": prompts,
             }
+            print(f"data: {data}")
             return self.communicator.send_data_to_server("ifeval_grader", data)
         return None
 
@@ -66,7 +67,6 @@ class IFEvalEnvironment(EnvironmentInterface):
             "reward": batch["rewards"][0].item(),
             "prompt_sentence": batch["prompt_sentences"][0],
             "response_sentence": batch["response_sentences"][0],
-            "expected_answer": batch["extra_verifier_info"][0]["ground_truth"],
         }
         batch["rewards"] = batch["rewards"] * batch["is_end"] # set a reward of 0 for any incorrectly ended sequences
         if (batch["rewards"] == 1).float().sum() > 0:
