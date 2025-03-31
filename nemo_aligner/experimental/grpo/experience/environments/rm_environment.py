@@ -31,19 +31,11 @@ def _str_list2numpy(str_list) -> np.ndarray:
 class RMEnvironment(EnvironmentInterface):
     def __init__(self, cfg: DictConfig):
         critic_ip_and_port = (cfg.servers.rm.ip, cfg.servers.rm.port)
-        server_dict = {
-            cfg.critic.name.train: critic_ip_and_port,
-            cfg.critic.name.infer: critic_ip_and_port,
-            cfg.critic.name.save: critic_ip_and_port,
-        }
-
-        if not cfg.combine_rm_and_critic_server:
-            server_dict[cfg.reward_model.name] = (cfg.servers.rm.ip, cfg.servers.rm.port)
+        
+        server_dict = {"rm": (cfg.servers.rm.ip, cfg.servers.rm.port)}
 
         self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
         self.communicator.print_server_dict()
-        self.combine_rm_and_critic_server = self.cfg.combine_rm_and_critic_server
-        self.pad_to_length = self.cfg.pad_to_length
         
         print(f"Started RMEnvironment client with {cfg.servers}")
         
@@ -60,7 +52,7 @@ class RMEnvironment(EnvironmentInterface):
             }
             
             return self.communicator.send_data_to_server(
-                server_name=self.cfg.reward_model.name, 
+                server_name="rm", 
                 data=send_data
             )
         return None
