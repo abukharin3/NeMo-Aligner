@@ -27,7 +27,7 @@ class IFEvalEnvironment(EnvironmentInterface):
         self.executor = futures.ThreadPoolExecutor()
         self.communicator = FlaskCommunicator(cfg.servers)
         
-        print(f"Started MathEnvironment client with {cfg.servers}")
+        print(f"Started IfevalEnvironment client with {cfg.servers}")
         
     def start_step(self, interactions, metadata, is_end):
         """

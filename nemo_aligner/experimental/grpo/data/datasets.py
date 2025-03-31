@@ -79,6 +79,9 @@ class AllTaskDataset:
         elif task_name == "ifeval" or task_name == "instruction_following":
             text_str = self.data[idx]["prompt"]
             extra_verifier_info = {"args": self.data[idx]["args"]}
+        elif task_name == "rm":
+            text_str = self.data[idx]["prompt"]
+            extra_verifier_info = {"args": None}
         elif ("args" in self.data[idx] and task_name == "deepscaler") or "text" in self.data[idx]:
             text_str = self.data[idx]["text"]
             extra_verifier_info = {"ground_truth": self.data[idx]["args"]["answer"]}
