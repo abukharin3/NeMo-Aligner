@@ -22,11 +22,45 @@ from nemo_aligner.servers.http_communicator import HTTPCommunicator
 from nemo_aligner.utils import parallel_state
 from nemo_aligner.utils.utils import masked_mean
 from nemo_aligner.experimental.grpo.experience.environments.metrics import calculate_pass_rate_per_prompt
-from nemo_aligner.utils.distributed import run_if_model_parallel_src
+from nemo_aligner.utils.distributed import run_if_model_parallel_src, broadcast_2d_tensor_within_mp
+from nemo_aligner.utils.server_utils import FutureResult
 
 def _str_list2numpy(str_list) -> np.ndarray:
     str_ndarray = np.array(str_list)[..., np.newaxis]
     return np.char.encode(str_ndarray, "utf-8")
+
+def get_future_result(future, *keys):
+    """It waits for the result of the future to be ready, gets the value with the given key,
+    and broadcasts it to the model parallel group. Then it returns it as output.
+    """
+    output = None if future is None else future.result()
+
+    results = []
+
+    for key in keys:
+
+        result = None
+        if output is not None:
+            result = torch.tensor(output[key], device=torch.cuda.current_device())
+
+        ten = broadcast_2d_tensor_within_mp(result)
+
+        results.append(ten)
+
+    if len(results) == 1:
+        return results[0]
+
+    return results
+
+class RMFutureResult(FutureResult):
+    def __init__(self, rm_future):
+        self.rm_future = rm_future
+
+    def result(self):
+        rewards = get_future_result(self.rm_future, "rewards")
+
+        self.rm_future = None
+        return rewards.flatten()
 
 class RMEnvironment(EnvironmentInterface):
     def __init__(self, cfg: DictConfig):
@@ -50,42 +84,21 @@ class RMEnvironment(EnvironmentInterface):
             send_data = {
                 "sentences": _str_list2numpy(responses),
             }
-            
-            return self.communicator.send_data_to_server(
-                server_name="rm", 
-                data=send_data
+
+            rm_future = run_if_model_parallel_src(
+                self.communicator.send_data_to_server, server_name="rm", data=send_data,
             )
+            
+            return RMFutureResult(rm_future)
         return None
 
     def finish_step(self, future):
         """
         Process the result from the reward model server.
         """
-        if future is None:
-            # Handle the case where we're not on the source rank
-            rewards = torch.zeros(0)
-            if parallel_state.model_parallel_is_initialized():
-                rewards = torch.zeros(
-                    1, device=torch.cuda.current_device()
-                )
-                torch.distributed.broadcast(
-                    rewards, 
-                    parallel_state.get_model_parallel_src_rank(),
-                    group=parallel_state.get_model_parallel_group()
-                )
-            return None, None, rewards, torch.ones_like(rewards)
         
         # Get the result from the future
-        result = future.result()
-        rewards = torch.tensor(result["rewards"]).squeeze(1)
-        
-        # Broadcast the rewards to all ranks in the model parallel group
-        if parallel_state.model_parallel_is_initialized():
-            torch.distributed.broadcast(
-                rewards, 
-                parallel_state.get_model_parallel_src_rank(),
-                group=parallel_state.get_model_parallel_group()
-            )
+        rewards = future.result()
         
         print('rewards shape', rewards.shape)
         return None, None, rewards, torch.ones(rewards.shape[0],)
