@@ -64,8 +64,8 @@ class RMFutureResult(FutureResult):
 
 class RMEnvironment(EnvironmentInterface):
     def __init__(self, cfg: DictConfig):
-        critic_ip_and_port = (cfg.servers.rm.ip, cfg.servers.rm.port)
         
+        print()
         server_dict = {"rm": (cfg.servers.rm.ip, cfg.servers.rm.port)}
 
         self.communicator = HTTPCommunicator.create_http_communicator_from_dict(server_dict)
@@ -90,7 +90,7 @@ class RMEnvironment(EnvironmentInterface):
             )
             
             return RMFutureResult(rm_future)
-        return None
+        return RMFutureResult(None)
 
     def finish_step(self, future):
         """
@@ -99,7 +99,7 @@ class RMEnvironment(EnvironmentInterface):
         
         # Get the result from the future
         rewards = future.result()
-        
+
         print('rewards shape', rewards.shape)
         return None, None, rewards, torch.ones(rewards.shape[0],)
     

@@ -37,7 +37,13 @@ class IFEvalEnvironment(EnvironmentInterface):
         if parallel_state.is_model_parallel_src_rank():
             # fold all interactions after the prompt together
             prompts = [interaction[0] for interaction in interactions]
-            responses = [''.join(interaction[1:]) for interaction in interactions]
+            print("--------------------------------")
+            print(f"prompts: {prompts}")
+            print("--------------------------------")
+            responses = [interaction[-1] for interaction in interactions]
+            print("********************************")
+            print(f"responses: {responses}")
+            print("********************************")
             args = [g["args"] for g in metadata]
             data = {
                 "pred_responses": responses,

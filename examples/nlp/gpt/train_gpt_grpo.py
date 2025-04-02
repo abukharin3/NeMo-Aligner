@@ -111,6 +111,7 @@ def main(cfg) -> None:
             cfg.model.data.system_prompt_file,
             cfg.model.data.prompt_file,
             seq_length=cfg.model.data.seq_length,
+            system_prompt=cfg.model.data.system_prompt,
         )
         for split in ("train", "validation")
     ]

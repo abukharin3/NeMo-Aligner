@@ -19,16 +19,16 @@ import torch
 from nemo.collections.nlp.modules.common.megatron.utils import get_ltor_masks_and_position_ids
 from nemo_aligner.utils.utils import batch_pad_to_fixed_len
 
-HARD_CODED_PROMPT_TEMPLATE = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\ndetailed thinking on<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nBelow is a math question. I want you to reason through the steps and then give a final answer. Your final answer should be in \\boxed{{}}.\nQuestion: {}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+HARD_CODED_PROMPT_TEMPLATE = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\ndetailed thinking on<|eot_id|><|start_header_id|>user<|end_header_id|>{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
 
 #TODO @sahilj handle too-long prompts and masking them out throughout the whole process and renormalizing on loss
 class AllTaskDataset:
-    def __init__(self, data_path, tokenizer, apply_chat_template: bool = True, system_prompt_file: str = None, prompt_file: str = None, seq_length=None):
+    def __init__(self, data_path, tokenizer, apply_chat_template: bool = True, system_prompt_file: str = None, prompt_file: str = None, seq_length=None, system_prompt=None):
         super().__init__()
         self.data_path = data_path
         self.tokenizer = tokenizer
         self.apply_chat_template = apply_chat_template
-        self.system_prompt = None
+        self.system_prompt = system_prompt
         self.prompt = "{}"
 
         assert os.path.exists(self.data_path), f"{self.data_path} must exist"
@@ -52,6 +52,10 @@ class AllTaskDataset:
                 self.prompt = f.read()
         else:
             self.prompt = HARD_CODED_PROMPT_TEMPLATE
+        
+        self.prompt = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{}<|eot_id|><|start_header_id|>user<|end_header_id|>{}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n"
+        
+
 
     def __len__(self):
         return len(self.data)
@@ -101,7 +105,9 @@ class AllTaskDataset:
         elif "args" in self.data[idx] and task_name == "deepscaler":
             text = self.data[idx]["text"]
         else:
-            text = self.prompt.format(text_str)
+            # Use system_prompt as the first parameter and text_str as the second
+            system_content = self.system_prompt if self.system_prompt else ""
+            text = self.prompt.format(system_content, text_str)
         
         sample, _ = self.encode(text)
         sample_tensor = torch.as_tensor(sample, dtype=torch.int64)
