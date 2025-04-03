@@ -16,6 +16,7 @@ from contextlib import nullcontext
 import os
 import time
 import shutil
+import socket
 import subprocess
 import gc
 
@@ -122,6 +123,31 @@ def check_shm_space():
     else:
         print(f"Available space in /dev/shm: {available_space_gb:.2f}GB")
 
+def check_shared_memory_usage():
+     # Get the host name
+     hostname = socket.gethostname()
+ 
+     # Read /proc/meminfo
+     with open('/proc/meminfo', 'r') as file:
+         meminfo = file.readlines()
+ 
+     # Find the Shmem line and extract the value in kB
+     shmem_kb = 0
+     for line in meminfo:
+         if line.startswith('Shmem:'):
+             shmem_kb = int(line.split()[1])
+             break
+ 
+     # Convert kB to GB
+     shmem_gb = shmem_kb / 1024 / 1024
+ 
+     # Check if shared memory usage exceeds 600GB
+     if shmem_gb > 600:
+         raise Exception(f"Shared memory usage is too high on {hostname}: {shmem_gb:.2f} GB")
+     print(f"Shared memory usage is within limits on {hostname}: {shmem_gb:.2f} GB")
+ 
+ 
+
 
 class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGenerativeInterface):
     def __init__(self, cfg: DictConfig, trainer: Trainer):
@@ -133,6 +159,7 @@ class MegatronGPTActorModel(NLPAdapterModelMixin, MegatronGPTModel, AlignableGen
         log_shared_memory_usage()
         try:
             check_shm_space()
+            check_shared_memory_usage()
         except Exception as e:
             print(e)
             raise
