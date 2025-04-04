@@ -83,6 +83,12 @@ class AllTaskDataset:
         elif task_name == "ifeval" or task_name == "instruction_following":
             text_str = self.data[idx]["prompt"]
             extra_verifier_info = {"args": self.data[idx]["args"]}
+        elif task_name == "name":
+            text_str = self.data[idx]["prompt"]
+            extra_verifier_info = {"args": ""}
+        elif task_name == "bfcl":
+            text_str = self.data[idx]["prompt"]
+            extra_verifier_info = {"args": self.data[idx]["args"]}
         elif task_name == "rm":
             text_str = self.data[idx]["prompt"]
             extra_verifier_info = {"args": None}
