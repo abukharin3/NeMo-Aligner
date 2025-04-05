@@ -64,6 +64,11 @@ trainer:
           name_grader:
             ip: localhost
             port: 3145
+      bfcl:
+        servers:
+          bfcl_grader:
+            ip: localhost
+            port: 3146
     # the sequence length to pad the rollout batch for training to
     # reduce fragmentation at the cost of using more
     # memory, set to null if we don't want to pad it
