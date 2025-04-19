@@ -138,7 +138,7 @@ class GRPOTrainer:
         grpo_train_data = GPTRolloutBatch() # using this class for easy chunking/sharding
         grpo_rollout_metrics = {}
 
-        rewards = rollout_batch["rewards"]
+        rewards = rollout_batch["rewards"] * rollout_batch["is_end"]
 
         if self.cfg.length_penalty_enabled:
             rewards = -1 * (1 - rewards) + -1 *rewards * ((rollout_batch["response_lengths"] - rollout_batch["prompt_lengths"]) / self.cfg.max_sequence_length)
