@@ -45,6 +45,8 @@ def calculate_baseline_and_std_per_prompt(prompts, rewards, valid_mask, leave_on
     reward_device = rewards.get_device()
     if reward_device == -1:
         reward_device = "cpu"
+    
+    valid_mask = torch.ones_like(valid_mask)
 
     print(rewards.shape)
     for i in range(len(unique_prompts)):
