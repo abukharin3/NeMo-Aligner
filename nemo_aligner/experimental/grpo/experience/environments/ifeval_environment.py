@@ -74,7 +74,7 @@ class IFEvalEnvironment(EnvironmentInterface):
             "prompt_sentence": batch["prompt_sentences"][0],
             "response_sentence": batch["response_sentences"][0],
         }
-        batch["rewards"] = batch["rewards"] * batch["is_end"] # set a reward of 0 for any incorrectly ended sequences
+        batch["rewards"] = batch["rewards"] # set a reward of 0 for any incorrectly ended sequences
         if (batch["rewards"] == 1).float().sum() > 0:
             correct_solution_generation_lengths = (
                 (batch["response_lengths"] - batch["prompt_lengths"])[batch["rewards"] == 1].float().mean().item()
